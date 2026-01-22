@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #f9f9f9; padding: 20px; }
+    .container { max-width: 500px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+    .logo { color: #EF534F; font-weight: 900; font-size: 28px; margin-bottom: 30px; display: block; text-decoration: none; }
+    .code-box { background: #F3F4F6; border-radius: 8px; padding: 20px; margin: 30px 0; font-size: 40px; font-weight: bold; letter-spacing: 10px; color: #1f2937; }
+    .text { color: #4B5563; font-size: 16px; line-height: 1.5; margin-bottom: 20px; }
+    .footer { font-size: 12px; color: #9CA3AF; margin-top: 40px; }
+    .rose { font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="{{ .SiteURL }}" class="logo">LowSplit</a>
+    
+    <p class="text" style="text-align: left;">¡Hola!</p>
+    <p class="text" style="text-align: left;">Estás verificando tu correo electrónico en LowSplit, el código de verificación es:</p>
+    
+    <!-- IMPORTANTE: En el panel de Supabase asegúrate de usar {{ .Token }} si configuras OTP, o {{ .ConfirmationURL }} si usas enlaces mágicos. Para este diseño de código numérico, es {{ .Token }} -->
+    <div class="code-box">{{ .Token }}</div>
+    
+    <p class="text" style="font-size: 14px;">y será válido durante 10 minutos.</p>
+    
+    <p class="text" style="font-weight: bold; font-size: 14px; text-align: left;">
+      Para la seguridad de su cuenta, no comparta el código de verificación con otros e ignore este correo si no lo está haciendo usted mismo.
+    </p>
+
+    <div class="footer" style="text-align: left;">
+      <p><span class="rose">🌹</span> Mis mejores deseos,<br>Equipo LowSplit</p>
+    </div>
+  </div>
+</body>
+</html>
