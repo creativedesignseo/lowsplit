@@ -1,10 +1,41 @@
 import { Link, useLocation } from 'react-router-dom'
 import { Menu, X, Globe, Home, HeadphonesIcon, CreditCard, Search, User } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const location = useLocation()
+  const [profile, setProfile] = useState(null)
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', session.user.id)
+          .single()
+        
+        if (data) setProfile(data)
+      }
+    }
+    
+    fetchProfile()
+
+    // Subscribe to realtime changes for instant updates
+    const subscription = supabase
+      .channel('public:profiles')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, payload => {
+        setProfile(payload.new)
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(subscription)
+    }
+  }, [])
 
   const navLinks = [
     { to: '/', label: 'Página de inicio', icon: Home },
@@ -60,8 +91,12 @@ const Navbar = () => {
             </button>
             
             {/* User */}
-            <Link to="/profile" className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
-              <User className="w-5 h-5 text-white" />
+            <Link to="/profile" className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors overflow-hidden border-2 border-transparent hover:border-white">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="User" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-5 h-5 text-white" />
+              )}
             </Link>
           </div>
 

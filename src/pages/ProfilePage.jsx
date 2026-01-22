@@ -200,8 +200,49 @@ const ProfilePage = () => {
     }
   }
 
+  const [uploading, setUploading] = useState(false)
+
   const handleAvatarUpload = async (event) => {
-    showToast('Función de carga de imagen pendiente de backend', 'error')
+    try {
+      if (!event.target.files || event.target.files.length === 0) {
+        return
+      }
+
+      const file = event.target.files[0]
+      const fileExt = file.name.split('.').pop()
+      const filePath = `${session.user.id}/${Math.random()}.${fileExt}`
+
+      setUploading(true)
+      showToast('Subiendo imagen...')
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ 
+          avatar_url: publicUrl,
+          updated_at: new Date()
+        })
+        .eq('id', session.user.id)
+
+      if (updateError) throw updateError
+
+      setProfile({ ...profile, avatar_url: publicUrl })
+      showToast('Foto de perfil actualizada')
+    } catch (error) {
+      console.error('Error uploading avatar:', error)
+      showToast('Error al subir la imagen', 'error')
+    } finally {
+      setUploading(false)
+    }
   }
 
   if (loading) {
