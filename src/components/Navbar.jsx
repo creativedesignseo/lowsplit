@@ -1,10 +1,12 @@
-import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, Globe, Home, HeadphonesIcon, CreditCard, Search, User } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Menu, X, Globe, Home, HeadphonesIcon, CreditCard, Search, User, Plus, LogOut, Settings, LayoutDashboard, HelpCircle, ChevronDown, Zap } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
 const Navbar = () => {
+  const navigate = useNavigate()
   const [isOpen, setIsOpen] = useState(false)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const location = useLocation()
   const [profile, setProfile] = useState(null)
 
@@ -38,28 +40,36 @@ const Navbar = () => {
   }, [])
 
   const navLinks = [
-    { to: '/', label: 'Página de inicio', icon: Home },
-    { to: '/soporte', label: 'Soporte post-venta', icon: HeadphonesIcon },
-    { to: '/suscripcion', label: 'Suscripción', icon: CreditCard },
+    { to: '/', label: 'Inicio', icon: Home },
+    { to: '/explore', label: 'Explorar', icon: Search }, // Changed to Explorer
+    { to: '/soporte', label: 'Soporte', icon: HeadphonesIcon },
   ]
 
+  const handleSearchClick = () => {
+    navigate('/explore')
+  }
+
+  const handleCreateGroup = () => {
+    navigate('/share-subscription')
+  }
+
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50" style={{ background: '#EF534F' }}>
+    <nav className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 shadow-md" style={{ background: '#EF534F' }}>
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-[50px]">
+        <div className="flex items-center justify-between h-[64px]">
           
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">L</span>
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-colors">
+              <span className="text-white font-black text-xl">L</span>
             </div>
-            <span className="text-white uppercase font-black text-sm tracking-wide">
+            <span className="text-white uppercase font-black text-base tracking-wider hidden sm:block">
               LowSplit
             </span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-1">
+          <div className="hidden md:flex items-center gap-2 bg-black/10 p-1 rounded-full backdrop-blur-sm">
             {navLinks.map((link) => {
               const IconComponent = link.icon
               const isActive = location.pathname === link.to
@@ -67,11 +77,11 @@ const Navbar = () => {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-white uppercase font-medium text-sm transition-all
-                    ${isActive ? 'bg-white/20' : 'hover:bg-white/10'}`}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-full text-white font-bold text-sm transition-all
+                    ${isActive ? 'bg-white text-[#EF534F] shadow-sm' : 'hover:bg-white/10'}`}
                 >
-                  <IconComponent className="w-4 h-4" />
-                  <span className="hidden lg:inline">{link.label}</span>
+                  <IconComponent className={`w-4 h-4 ${isActive ? 'text-[#EF534F]' : 'text-white'}`} strokeWidth={2.5} />
+                  <span className="">{link.label}</span>
                 </Link>
               )
             })}
@@ -79,25 +89,119 @@ const Navbar = () => {
 
           {/* Right side - Search, Language, User */}
           <div className="hidden md:flex items-center gap-3">
-            {/* Search */}
-            <button className="p-2 rounded-full hover:bg-white/10 transition-colors">
-              <Search className="w-5 h-5 text-white" />
+             {/* Share Button (CTA) */}
+            <button 
+              onClick={handleCreateGroup}
+              className="px-5 py-2 rounded-full bg-black/20 text-white font-bold text-sm hover:bg-black/30 transition-all flex items-center gap-2 border border-white/10"
+            >
+                <Plus className="w-4 h-4" /> Compartir
+            </button>
+
+            {/* Search Button (Functional) */}
+            <button 
+              onClick={handleSearchClick}
+              className="p-2.5 rounded-full hover:bg-white/20 transition-colors text-white/90 hover:text-white"
+              aria-label="Buscar"
+            >
+              <Search className="w-5 h-5" strokeWidth={2.5} />
             </button>
             
             {/* Language */}
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-white/10 transition-colors">
+            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:bg-white/10 transition-colors border border-white/20">
               <Globe className="w-4 h-4 text-white" />
-              <span className="text-white text-sm font-medium">ES</span>
+              <span className="text-white text-xs font-bold">ES</span>
             </button>
             
-            {/* User */}
-            <Link to="/profile" className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors overflow-hidden border-2 border-transparent hover:border-white">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="User" className="w-full h-full object-cover" />
-              ) : (
-                <User className="w-5 h-5 text-white" />
+            {/* User Dropdown */}
+            <div className="relative">
+              <button 
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full bg-white/20 hover:bg-white/30 transition-all border-2 border-transparent hover:border-white/20"
+              >
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10">
+                   {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="User" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                       <User className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+                </div>
+                <ChevronDown className={`w-3 h-3 text-white transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isDropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)}></div>
+                  <div className="absolute top-full right-0 mt-3 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                    
+                    {/* Header */}
+                    <div className="px-5 py-4 border-b border-gray-50">
+                        <p className="text-sm font-bold text-gray-900 truncate">
+                            {profile?.email || 'Usuario'}
+                        </p>
+                        <p className="text-xs text-gray-400">Información personal</p>
+                    </div>
+
+                    {/* Savings Banner */}
+                    <div className="px-4 py-2">
+                        <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-3 flex items-center justify-between text-white shadow-lg shadow-gray-200">
+                            <div>
+                                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Ahorro Total</p>
+                                <p className="text-lg font-black text-[#EF534F]">€0.00</p>
+                            </div>
+                            <Zap className="w-5 h-5 text-yellow-400" fill="currentColor" />
+                        </div>
+                    </div>
+                    
+                    {/* Menu Items */}
+                    <div className="py-2">
+                         <Link 
+                            to="/dashboard" 
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-gray-700 hover:text-gray-900"
+                        >
+                            <LayoutDashboard className="w-4 h-4" />
+                            <span className="text-sm font-medium">Mi Suscripción</span>
+                         </Link>
+
+                         <Link 
+                            to="/soporte" 
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-gray-700 hover:text-gray-900"
+                        >
+                            <HelpCircle className="w-4 h-4" />
+                            <span className="text-sm font-medium">Soporte</span>
+                         </Link>
+
+                         <Link 
+                            to="/profile" 
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-gray-700 hover:text-gray-900"
+                        >
+                            <Settings className="w-4 h-4" />
+                            <span className="text-sm font-medium">Configuración</span>
+                         </Link>
+                    </div>
+
+                    <div className="border-t border-gray-50 mt-1 py-1">
+                        <button 
+                            onClick={async () => {
+                                await supabase.auth.signOut()
+                                setIsDropdownOpen(false)
+                                navigate('/login')
+                            }}
+                            className="w-full flex items-center gap-3 px-5 py-3 hover:bg-red-50 transition-colors text-gray-500 hover:text-red-500"
+                        >
+                            <LogOut className="w-4 h-4" />
+                            <span className="text-sm font-medium">Cerrar sesión</span>
+                        </button>
+                    </div>
+
+                  </div>
+                </>
               )}
-            </Link>
+            </div>
           </div>
 
           {/* Mobile menu button */}

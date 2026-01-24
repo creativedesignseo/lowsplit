@@ -5,7 +5,7 @@
 
 -- 1. Perfiles (Extensión de Auth.users)
 -- Almacena información adicional del usuario
-CREATE TABLE profiles (
+CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   full_name TEXT,
   username TEXT UNIQUE,
@@ -29,6 +29,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
@@ -37,7 +38,7 @@ CREATE TRIGGER on_auth_user_created
 
 -- 2. Servicios Maestros (Netflix, Spotify, etc.)
 -- Catálogo de servicios disponibles para compartir
-CREATE TABLE services (
+CREATE TABLE IF NOT EXISTS services (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   slug TEXT UNIQUE NOT NULL, -- ej: 'netflix-premium', 'spotify-family'
@@ -52,14 +53,14 @@ CREATE TABLE services (
 );
 
 -- Índices para búsquedas
-CREATE INDEX idx_services_category ON services(category);
-CREATE INDEX idx_services_slug ON services(slug);
+CREATE INDEX IF NOT EXISTS idx_services_category ON services(category);
+CREATE INDEX IF NOT EXISTS idx_services_slug ON services(slug);
 
 -- =====================================================
 
 -- 3. Grupos de Suscripción (Instancias creadas por usuarios)
 -- Grupos donde usuarios comparten un servicio
-CREATE TABLE subscription_groups (
+CREATE TABLE IF NOT EXISTS subscription_groups (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   service_id UUID REFERENCES services(id) ON DELETE RESTRICT NOT NULL,
   admin_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
@@ -75,15 +76,15 @@ CREATE TABLE subscription_groups (
 );
 
 -- Índices
-CREATE INDEX idx_groups_service ON subscription_groups(service_id);
-CREATE INDEX idx_groups_admin ON subscription_groups(admin_id);
-CREATE INDEX idx_groups_status ON subscription_groups(status);
+CREATE INDEX IF NOT EXISTS idx_groups_service ON subscription_groups(service_id);
+CREATE INDEX IF NOT EXISTS idx_groups_admin ON subscription_groups(admin_id);
+CREATE INDEX IF NOT EXISTS idx_groups_status ON subscription_groups(status);
 
 -- =====================================================
 
 -- 4. Membresías (Relación Muchos a Muchos)
 -- Usuarios que pertenecen a grupos
-CREATE TABLE memberships (
+CREATE TABLE IF NOT EXISTS memberships (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   group_id UUID REFERENCES subscription_groups(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
@@ -98,14 +99,14 @@ CREATE TABLE memberships (
 );
 
 -- Índices
-CREATE INDEX idx_memberships_user ON memberships(user_id);
-CREATE INDEX idx_memberships_group ON memberships(group_id);
-CREATE INDEX idx_memberships_status ON memberships(payment_status);
+CREATE INDEX IF NOT EXISTS idx_memberships_user ON memberships(user_id);
+CREATE INDEX IF NOT EXISTS idx_memberships_group ON memberships(group_id);
+CREATE INDEX IF NOT EXISTS idx_memberships_status ON memberships(payment_status);
 
 -- =====================================================
 
 -- 5. Transacciones de Pago (Historial)
-CREATE TABLE payment_transactions (
+CREATE TABLE IF NOT EXISTS payment_transactions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   membership_id UUID REFERENCES memberships(id) ON DELETE SET NULL,
   user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
@@ -132,11 +133,13 @@ ALTER TABLE payment_transactions ENABLE ROW LEVEL SECURITY;
 -- =====================================================
 
 -- Cualquiera puede ver perfiles públicos
+DROP POLICY IF EXISTS "Perfiles públicos visibles para todos" ON profiles;
 CREATE POLICY "Perfiles públicos visibles para todos"
   ON profiles FOR SELECT
   USING (true);
 
 -- Usuarios solo pueden actualizar su propio perfil
+DROP POLICY IF EXISTS "Usuarios actualizan su propio perfil" ON profiles;
 CREATE POLICY "Usuarios actualizan su propio perfil"
   ON profiles FOR UPDATE
   USING (auth.uid() = id);
@@ -146,6 +149,7 @@ CREATE POLICY "Usuarios actualizan su propio perfil"
 -- =====================================================
 
 -- Catálogo de servicios es público
+DROP POLICY IF EXISTS "Servicios visibles para todos" ON services;
 CREATE POLICY "Servicios visibles para todos"
   ON services FOR SELECT
   USING (is_active = true);
@@ -155,21 +159,25 @@ CREATE POLICY "Servicios visibles para todos"
 -- =====================================================
 
 -- Grupos disponibles son visibles para todos (sin credenciales)
+DROP POLICY IF EXISTS "Grupos disponibles visibles" ON subscription_groups;
 CREATE POLICY "Grupos disponibles visibles"
   ON subscription_groups FOR SELECT
   USING (status != 'closed');
 
 -- Solo el admin puede crear grupos
+DROP POLICY IF EXISTS "Usuarios autenticados crean grupos" ON subscription_groups;
 CREATE POLICY "Usuarios autenticados crean grupos"
   ON subscription_groups FOR INSERT
   WITH CHECK (auth.uid() = admin_id);
 
 -- Solo el admin puede actualizar su grupo
+DROP POLICY IF EXISTS "Admin actualiza su grupo" ON subscription_groups;
 CREATE POLICY "Admin actualiza su grupo"
   ON subscription_groups FOR UPDATE
   USING (auth.uid() = admin_id);
 
 -- Solo el admin puede eliminar su grupo
+DROP POLICY IF EXISTS "Admin elimina su grupo" ON subscription_groups;
 CREATE POLICY "Admin elimina su grupo"
   ON subscription_groups FOR DELETE
   USING (auth.uid() = admin_id);
@@ -179,11 +187,13 @@ CREATE POLICY "Admin elimina su grupo"
 -- =====================================================
 
 -- Usuarios ven sus propias membresías
+DROP POLICY IF EXISTS "Ver propias membresías" ON memberships;
 CREATE POLICY "Ver propias membresías"
   ON memberships FOR SELECT
   USING (auth.uid() = user_id);
 
 -- Admins ven membresías de sus grupos
+DROP POLICY IF EXISTS "Admin ve membresías de su grupo" ON memberships;
 CREATE POLICY "Admin ve membresías de su grupo"
   ON memberships FOR SELECT
   USING (
@@ -195,11 +205,13 @@ CREATE POLICY "Admin ve membresías de su grupo"
   );
 
 -- Usuarios autenticados pueden crear membresías (unirse a grupos)
+DROP POLICY IF EXISTS "Usuarios se unen a grupos" ON memberships;
 CREATE POLICY "Usuarios se unen a grupos"
   ON memberships FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- Usuarios pueden cancelar su propia membresía
+DROP POLICY IF EXISTS "Usuarios cancelan su membresía" ON memberships;
 CREATE POLICY "Usuarios cancelan su membresía"
   ON memberships FOR UPDATE
   USING (auth.uid() = user_id);
@@ -209,6 +221,7 @@ CREATE POLICY "Usuarios cancelan su membresía"
 -- =====================================================
 
 -- Usuarios ven sus propias transacciones
+DROP POLICY IF EXISTS "Ver propias transacciones" ON payment_transactions;
 CREATE POLICY "Ver propias transacciones"
   ON payment_transactions FOR SELECT
   USING (auth.uid() = user_id);
