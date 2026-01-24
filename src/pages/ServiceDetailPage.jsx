@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { Check, ChevronLeft, Monitor, Smartphone, Laptop, Globe, Loader2, AlertCircle, ShieldCheck, Zap, User } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -17,6 +17,8 @@ const ServiceDetailPage = () => {
   const [autoRenew, setAutoRenew] = useState(true)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [paymentError, setPaymentError] = useState(null)
+  const [showBizumModal, setShowBizumModal] = useState(false)
+  const navigate = useNavigate()
 
   // Handle Stripe Checkout
   const handlePayment = async () => {
@@ -62,6 +64,76 @@ const ServiceDetailPage = () => {
       setPaymentError(error.message || 'Error al procesar el pago')
     } finally {
       setIsProcessingPayment(false)
+    }
+  }
+
+  // Handle Bizum Payment (Manual)
+  const handleBizumPayment = async () => {
+    if (!selectedPlan || !service) return
+    
+    setIsProcessingPayment(true)
+    
+    try {
+        const { data: { session } } = await supabase.auth.getSession()
+        
+        if (!session) {
+            navigate('/auth')
+            return
+        }
+
+        const response = await fetch('/.netlify/functions/manual-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: session.user.id,
+                userEmail: session.user.email,
+                // Assuming we are in Explore mode (no specific group ID yet, so we just create transaction)
+                // BUT wait, if we are in Explore, we don't have a groupId unless we select one. 
+                // The current page logic is for "Service Detail", which implies creating a NEW subscription or joining?
+                // The current flow in `ServiceDetailPage` doesn't seem to have `groupId` from params unless passed?
+                // The `create-checkout` function had `groupId: null`. 
+                // If this is "buy a plan", do we create a group? Or just a transaction?
+                // The webhook logic for `create-checkout` creates a membership ONLY if `groupId` exists.
+                // If I am buying generic credit? 
+                // Ah, looking at `ShareSubscriptionPage`, that's where we create groups.
+                // `ServiceDetailPage` seems to be for joining? Or buying "access"?
+                // Let's look at `create-checkout` usage in `ServiceDetailPage`: `groupId: null`.
+                // So buying here just records a transaction. It doesn't seem to assign a group unless one is picked.
+                // Re-reading `ServiceDetailPage`... it doesn't have group selection.
+                // It seems this page is for "Buying a Service" -> which might mean "Getting assigned to a group automatically" or "Credits"?
+                // In Phase 4 logic: `memberships` require a `group_id`.
+                // If `groupId` is null, the webhook does NOT create a membership.
+                // So... what is the point of this page if it doesn't join a group?
+                // Ah, maybe the user is supposed to find a group in `/explore` and click it?
+                // Use case: "Netflix Premium" -> Buy.
+                // If I click "Pagar", it creates a transaction.
+                // Then what? Support manually assigns?
+                // Given "LowSplit" model usually means joining a group.
+                // For now, I will mirror the Stripe logic: `groupId: null`. 
+                // The transaction will be recorded. The "Membership" creation might be manual by admin later?
+                // Or maybe I should auto-create a group for them?
+                // User said: "He enviado el pago" -> "Activación Inmediata".
+                // If I treat this as "Add funds", fine.
+                // Let's match `create-checkout` behavior.
+                serviceName: service.name,
+                amount: selectedPlan.totalPrice,
+                months: selectedPlan.months
+            })
+        })
+
+        const data = await response.json()
+        
+        if (data.error) throw new Error(data.error)
+
+        // Success -> Redirect to Dashboard
+        setShowBizumModal(false)
+        navigate('/dashboard?payment=success_bizum')
+
+    } catch (error) {
+        console.error('Bizum error:', error)
+        alert('Error al procesar: ' + error.message)
+    } finally {
+        setIsProcessingPayment(false)
     }
   }
   
@@ -332,24 +404,35 @@ const ServiceDetailPage = () => {
                       </div>
                     )}
 
-                    <button 
-                        onClick={handlePayment}
-                        disabled={isProcessingPayment || !selectedPlan}
-                        className="w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg shadow-red-200 hover:shadow-red-300 transform active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        style={{ background: '#EF534F' }}
-                    >
-                        {isProcessingPayment ? (
-                          <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            Procesando...
-                          </>
-                        ) : (
-                          'Pagar ahora'
-                        )}
-                    </button>
+                    <div className="space-y-3">
+                        <button 
+                            onClick={handlePayment}
+                            disabled={isProcessingPayment || !selectedPlan}
+                            className="w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg shadow-red-200 hover:shadow-red-300 transform active:scale-[0.95] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            style={{ background: '#EF534F' }}
+                        >
+                            {isProcessingPayment ? (
+                              <>
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                                Procesando...
+                              </>
+                            ) : (
+                              'Pagar con Tarjeta'
+                            )}
+                        </button>
+
+                        <button 
+                            onClick={() => setShowBizumModal(true)}
+                            disabled={isProcessingPayment || !selectedPlan}
+                            className="w-full py-3 rounded-xl text-[#EF534F] bg-red-50 font-bold border-2 border-red-100 hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
+                        >
+                            <Smartphone className="w-5 h-5" />
+                            Pagar con Bizum
+                        </button>
+                    </div>
 
                     <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-400">
-                        <Monitor className="w-3 h-3" /> Pago 100% Seguro y Encriptado
+                        <ShieldCheck className="w-3 h-3" /> Pago 100% Seguro y Encriptado
                     </div>
                 </div>
 
@@ -372,6 +455,44 @@ const ServiceDetailPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Bizum Modal */}
+      {showBizumModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in duration-300">
+                <div className="text-center">
+                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Smartphone className="w-8 h-8 text-blue-600" />
+                    </div>
+                    <h3 className="text-2xl font-black text-gray-900 mb-2">Pagar con Bizum</h3>
+                    <p className="text-gray-500 mb-6">Envía el importe exacto al siguiente número para activar tu suscripción.</p>
+                    
+                    <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">NÚMERO BIZUM</p>
+                        <p className="text-3xl font-black text-gray-900 tracking-wider mb-2 select-all">+34 600 000 000</p>
+                        <p className="text-sm text-gray-600">Concepto: <b>{service.name}</b></p>
+                        <p className="text-sm text-gray-600 mt-1">Importe: <b className="text-[#EF534F]">€{selectedPlan?.totalPrice.toFixed(2)}</b></p>
+                    </div>
+
+                    <div className="space-y-3">
+                        <button 
+                            onClick={handleBizumPayment}
+                            disabled={isProcessingPayment}
+                            className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
+                        >
+                            {isProcessingPayment ? <Loader2 className="w-5 h-5 animate-spin" /> : 'He enviado el pago'}
+                        </button>
+                        <button 
+                            onClick={() => setShowBizumModal(false)}
+                            className="w-full py-3 text-gray-500 font-medium hover:text-gray-800"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+      )}
     </>
   )
 }
