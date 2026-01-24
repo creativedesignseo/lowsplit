@@ -47,7 +47,6 @@ export async function handler(event) {
       const customerEmail = session.customer_email;
       let userId = null;
 
-      // Try finding user by email in auth
       const { data: authData } = await supabase.auth.admin.listUsers();
       const user = authData?.users?.find(u => u.email === customerEmail);
       
@@ -56,20 +55,66 @@ export async function handler(event) {
         console.log('User found:', userId);
       } else {
         console.error('User not found via email:', customerEmail);
-        // We persist data anyway for manual reconciliation
       }
 
-      // 2. Extract Metadata
-      const groupId = session.metadata?.groupId;
+      // 2. Extract Metadata & Auto-Assign Logic
+      let groupId = session.metadata?.groupId;
       const months = parseInt(session.metadata?.months || '1');
       const serviceName = session.metadata?.serviceName || 'Unknown';
       const amountPaid = session.amount_total / 100;
+
+      if (!groupId && serviceName && userId) {
+        console.log('No group provided in metadata. Auto-assigning...');
+        
+        // Find Service ID
+        const { data: service } = await supabase
+          .from('services')
+          .select('id, max_slots')
+          .eq('name', serviceName)
+          .single();
+        
+        if (service) {
+           // Find Available Group
+           const { data: availableGroup } = await supabase
+              .from('subscription_groups')
+              .select('id, slots_occupied')
+              .eq('service_id', service.id)
+              .eq('status', 'available')
+              .lt('slots_occupied', service.max_slots)
+              .limit(1)
+              .maybeSingle();
+
+           if (availableGroup) {
+              groupId = availableGroup.id;
+              console.log('Found available group:', groupId);
+           } else {
+              console.log('No available group found. Creating a new one...');
+              const { data: newGroup } = await supabase
+                  .from('subscription_groups')
+                  .insert({
+                      service_id: service.id,
+                      admin_id: userId,
+                      title: `${serviceName} Group (Auto)`,
+                      price_per_slot: amountPaid / months,
+                      max_slots: service.max_slots,
+                      slots_occupied: 0,
+                      status: 'available',
+                      payment_cycle: 'monthly',
+                      visibility: 'public'
+                  })
+                  .select()
+                  .single();
+              
+              if (newGroup) groupId = newGroup.id;
+           }
+        }
+      }
 
       // 3. Record Transaction
       const { data: transaction, error: txError } = await supabase
         .from('payment_transactions')
         .insert({
-          user_id: userId, // Can be null if not found
+          user_id: userId,
           amount: amountPaid,
           currency: 'EUR',
           status: 'completed',
@@ -80,12 +125,8 @@ export async function handler(event) {
 
       if (txError) console.error('Transaction Error:', txError);
 
-      // 4. Create Membership (ONLY if we have a user and a group)
+      // 4. Create Membership
       if (userId && groupId) {
-        // Calculate expiry
-        const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + months);
-
         const { data: membership, error: memError } = await supabase
           .from('memberships')
           .insert({
@@ -95,11 +136,6 @@ export async function handler(event) {
             payment_status: 'paid',
             stripe_subscription_id: session.payment_intent,
             last_payment_at: new Date().toISOString()
-            // expires_at column might not exist in schema yet/or logic handled elsewhere? 
-            // verifying schema... schema has joined_at/last_payment but expires at?
-            // Schema check in step 996 showed no 'expires_at' column in memberships table!
-            // Wait, logic in Step 1001 didn't use expires_at either? 
-            // Step 1001 code: "last_payment_at: new Date().toISOString()" - Correct.
           })
           .select()
           .single();
@@ -109,7 +145,7 @@ export async function handler(event) {
         } else {
           console.log('Membership created:', membership.id);
 
-          // 5. Update Transaction link
+          // Link Membership to Transaction
           if (transaction) {
             await supabase
               .from('payment_transactions')
@@ -117,7 +153,7 @@ export async function handler(event) {
               .eq('id', transaction.id);
           }
 
-          // 6. Update Group Slots
+          // Update Group Slots
           await supabase.rpc('increment_group_slots', { group_id: groupId });
         }
       }
