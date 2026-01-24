@@ -51,7 +51,8 @@ export async function handler(event) {
       cancel_url: `${event.headers.origin || event.headers.referer?.split('/').slice(0, 3).join('/')}/explore?payment=cancelled`,
       metadata: {
         groupId: groupId || '',
-        months: String(months || 1)
+        months: String(months || 1),
+        serviceName: serviceName || ''
       }
     });
 
