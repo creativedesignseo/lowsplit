@@ -5,11 +5,14 @@
 
 -- 1. Perfiles (Extensión de Auth.users)
 -- Almacena información adicional del usuario
+CREATE TYPE user_role AS ENUM ('user', 'admin', 'super_admin');
+
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   full_name TEXT,
   username TEXT UNIQUE,
   avatar_url TEXT,
+  role USER_ROLE DEFAULT 'user', -- enum: 'user', 'admin', 'super_admin'
   reputation_score INT DEFAULT 100 CHECK (reputation_score >= 0 AND reputation_score <= 100),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
@@ -68,7 +71,11 @@ CREATE TABLE IF NOT EXISTS subscription_groups (
   title TEXT, -- Nombre personalizado del grupo (opcional)
   description TEXT,
   access_credentials TEXT, -- Campo encriptado - solo visible para miembros pagados
-  slots_occupied INT DEFAULT 1 CHECK (slots_occupied >= 1),
+  credentials_login TEXT,
+  credentials_password TEXT,
+  max_slots INT DEFAULT 4,
+  visibility TEXT DEFAULT 'public',
+  slots_occupied INT DEFAULT 1 CHECK (slots_occupied >= 0),
   price_per_slot DECIMAL(10,2), -- Calculado: total_price / max_slots + comisión
   next_payment_date DATE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),

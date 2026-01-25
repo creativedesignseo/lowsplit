@@ -15,13 +15,20 @@ import TestPage from './pages/TestPage'
 // Layout components
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
+import AdminLayout from './components/layouts/AdminLayout'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminUsers from './pages/admin/AdminUsers'
+import AdminStock from './pages/admin/AdminStock'
+import AdminGroups from './pages/admin/AdminGroups'
+import AdminAudit from './pages/admin/AdminAudit'
 
 // Layout wrapper that conditionally shows navbar/footer
 const Layout = ({ children }) => {
   const location = useLocation()
   
   // Auth pages or Test page don't show navbar/footer
-  const isAuthPage = ['/login', '/register', '/test'].includes(location.pathname)
+  // Admin pages have their own layout
+  const isAuthPage = ['/login', '/register', '/test'].includes(location.pathname) || location.pathname.startsWith('/admin')
   
   if (isAuthPage) {
     return <>{children}</>
@@ -45,6 +52,7 @@ function App() {
       
       <Layout>
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<HomePage />} />
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/service/:id" element={<ServiceDetailPage />} />
@@ -54,6 +62,15 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/test" element={<TestPage />} />
+
+          {/* Admin Routes */}
+          <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="stock" element={<AdminStock />} />
+              <Route path="groups" element={<AdminGroups />} />
+              <Route path="audit" element={<AdminAudit />} />
+          </Route>
         </Routes>
       </Layout>
     </>
