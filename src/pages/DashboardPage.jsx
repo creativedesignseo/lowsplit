@@ -16,6 +16,12 @@ const DashboardPage = () => {
   const [sales, setSales] = useState([])
   const [loadingData, setLoadingData] = useState(false)
 
+  // Credentials Edit State
+  const [editingCreds, setEditingCreds] = useState(null) // group ID
+  const [credsForm, setCredsForm] = useState({ login: '', password: '' })
+  const [showPassword, setShowPassword] = useState(false)
+  const [savingCreds, setSavingCreds] = useState(false)
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
@@ -85,6 +91,8 @@ const DashboardPage = () => {
           slots_occupied,
           price_per_slot,
           status,
+          credentials_login,
+          credentials_password,
           services (
             id,
             name,
@@ -105,7 +113,9 @@ const DashboardPage = () => {
         total: g.services?.max_slots || 4,
         earnings: ((g.slots_occupied - 1) * (g.price_per_slot || 0)), // earnings from sold slots (excluding admin)
         pricePerSlot: g.price_per_slot || 0,
-        status: g.status
+        status: g.status,
+        login: g.credentials_login,
+        password: g.credentials_password
       }))
       setSales(salesData)
 
@@ -114,6 +124,46 @@ const DashboardPage = () => {
     } finally {
       setLoadingData(false)
     }
+  }
+
+  const handleEditCreds = (group) => {
+    setEditingCreds(group.id)
+    setCredsForm({
+        login: group.login || '',
+        password: group.password || ''
+    })
+    setShowPassword(false)
+  }
+
+  const saveCreds = async () => {
+      setSavingCreds(true)
+      try {
+          const { error } = await supabase
+              .from('subscription_groups')
+              .update({
+                  credentials_login: credsForm.login,
+                  credentials_password: credsForm.password
+              })
+              .eq('id', editingCreds)
+
+          if (error) throw error
+
+          // Refresh local state
+          const updatedSales = sales.map(s => {
+              if (s.id === editingCreds) {
+                  return { ...s, login: credsForm.login, password: credsForm.password }
+              }
+              return s
+          })
+          setSales(updatedSales)
+          setEditingCreds(null)
+          
+      } catch (error) {
+          console.error('Error updating creds:', error)
+          alert('Error al guardar credenciales')
+      } finally {
+          setSavingCreds(false)
+      }
   }
 
   if (loading) {
@@ -288,7 +338,7 @@ const DashboardPage = () => {
                                       </div>
                                       <div>
                                           <h3 className="font-bold text-gray-900 text-lg">{group.name}</h3>
-                                          <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
+                                          <div className="flex items-center gap-2 text-xs font-medium text-gray-500 mb-2">
                                               <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded-md">
                                                   <User className="w-3 h-3" />
                                                   {group.sold} / {group.total} ocupados
@@ -297,6 +347,14 @@ const DashboardPage = () => {
                                                 {group.status === 'available' ? 'Disponible' : group.status === 'full' ? 'Lleno' : 'Cerrado'}
                                               </span>
                                           </div>
+                                          
+                                          {/* Manage Creds Button (Only for Owners) */}
+                                          <button 
+                                            onClick={() => handleEditCreds(group)}
+                                            className="text-xs font-bold text-[#EF534F] hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-full transition-colors"
+                                          >
+                                              Gestionar Acceso 🔒
+                                          </button>
                                       </div>
                                   </div>
                                   
@@ -330,6 +388,66 @@ const DashboardPage = () => {
             </div>
           )}
         </div>
+
+        {/* Credentials Edit Modal */}
+        {editingCreds && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">Actualizar Credenciales</h3>
+                    <p className="text-sm text-gray-500 mb-6">
+                        Estas credenciales son las que verán los usuarios que paguen por unirse a tu grupo.
+                    </p>
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Usuario / Email</label>
+                            <input 
+                                type="text" 
+                                value={credsForm.login}
+                                onChange={(e) => setCredsForm({...credsForm, login: e.target.value})}
+                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#EF534F] focus:ring-1 focus:ring-[#EF534F]"
+                                placeholder="ej: usuario@email.com"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Contraseña</label>
+                            <div className="relative">
+                                <input 
+                                    type={showPassword ? "text" : "password"}
+                                    value={credsForm.password}
+                                    onChange={(e) => setCredsForm({...credsForm, password: e.target.value})}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#EF534F] focus:ring-1 focus:ring-[#EF534F]"
+                                    placeholder="••••••••"
+                                />
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                                >
+                                    {showPassword ? "OCULTAR" : "VER"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 flex gap-3">
+                        <button 
+                            onClick={() => setEditingCreds(null)}
+                            className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            onClick={saveCreds}
+                            disabled={savingCreds}
+                            className="flex-1 py-3 bg-[#EF534F] text-white font-bold rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50 flex justify-center items-center"
+                        >
+                            {savingCreds ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Guardar Cambios'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
       </section>
     </>
   )
