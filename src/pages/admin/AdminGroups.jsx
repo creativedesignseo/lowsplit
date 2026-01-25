@@ -6,32 +6,77 @@ import { supabase } from '../../lib/supabase'
 const AdminGroups = () => {
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [editingCreds, setEditingCreds] = useState(null) // Group ID being edited
   const [credsForm, setCredsForm] = useState({ login: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   
   // Fetch data from Netlify Function (Secure Admin API)
+  // Fallback to Supabase direct query if function fails (e.g. localhost)
   const fetchGroups = async () => {
     setLoading(true)
+    setError(null)
+    
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
 
-      const response = await fetch('/.netlify/functions/admin-groups', {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      })
+      // 1. Try Netlify Function first
+      try {
+          const response = await fetch('/.netlify/functions/admin-groups', {
+            headers: { 'Authorization': `Bearer ${session.access_token}` }
+          })
+          
+          const contentType = response.headers.get("content-type");
+          if (response.ok && contentType && contentType.includes("application/json")) {
+              const data = await response.json()
+              setGroups(data.groups || [])
+              return // Success via Function
+          }
+      } catch (err) {
+          // Function failed, proceed to fallback
+          console.warn('Admin Function unavailable, falling back to direct DB:', err)
+      }
 
-      if (!response.ok) throw new Error('Failed to fetch groups')
+      // 2. Fallback: Direct Supabase Query (Localhost / Dev)
+      console.log('Using Direct Supabase Fallback for Admin Groups')
       
-      const data = await response.json()
-      setGroups(data.groups || [])
+      const { data: dbGroups, error: dbError } = await supabase
+        .from('subscription_groups')
+        .select(`
+            *,
+            services (
+                name,
+                icon_url,
+                slug,
+                max_slots
+            ),
+            profiles (
+                email
+            ),
+            memberships (
+                id,
+                user_id
+            )
+        `)
+        .order('created_at', { ascending: false })
+
+      if (dbError) throw dbError
+
+      // Map DB result to UI structure
+      const mappedGroups = dbGroups.map(g => ({
+          ...g,
+          owner_name: g.profiles?.email?.split('@')[0] || 'Unknown',
+          members: g.memberships || [], // Simplified members list
+          max_slots: g.services?.max_slots || 4
+      }))
+
+      setGroups(mappedGroups)
 
     } catch (error) {
       console.error('Error fetching groups:', error)
-      alert('Error loading groups')
+      setError(error.message)
     } finally {
       setLoading(false)
     }
@@ -115,7 +160,22 @@ const AdminGroups = () => {
             </div>
         </div>
 
+        {/* Error State */}
+        {error && (
+            <div className="bg-orange-50 border border-orange-200 text-orange-700 px-4 py-3 rounded-xl flex items-start gap-3">
+                <div className="mt-1"><Shield className="w-5 h-5" /></div>
+                <div>
+                   <p className="font-bold">Cannot load admin data</p>
+                   <p className="text-sm">{error}</p>
+                   <p className="text-xs mt-2 opacity-80">
+                       Note: Admin functions require the Netlify backend. This is expected if you are running on localhost:3000 only.
+                   </p>
+                </div>
+            </div>
+        )}
+
         {/* Table */}
+        {!error && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             {loading ? (
                 <div className="p-12 flex justify-center">
@@ -252,6 +312,7 @@ const AdminGroups = () => {
                 </div>
             )}
         </div>
+        )}
       </div>
     </>
   )
