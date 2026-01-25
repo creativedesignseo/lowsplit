@@ -9,6 +9,7 @@ import ProfilePage from './pages/ProfilePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ServiceDetailPage from './pages/ServiceDetailPage'
+import GroupDetailPage from './pages/GroupDetailPage'
 import ShareSubscriptionPage from './pages/ShareSubscriptionPage'
 import TestPage from './pages/TestPage'
 
@@ -56,6 +57,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/service/:id" element={<ServiceDetailPage />} />
+          <Route path="/group/:id" element={<GroupDetailPage />} />
           <Route path="/share-subscription" element={<ShareSubscriptionPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/profile" element={<ProfilePage />} />

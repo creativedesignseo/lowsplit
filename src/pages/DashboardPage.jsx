@@ -57,6 +57,8 @@ const DashboardPage = () => {
             price_per_slot,
             next_payment_date,
             status,
+            credentials_login,
+            credentials_password,
             services (
               id,
               name,
@@ -73,12 +75,15 @@ const DashboardPage = () => {
       // Transform membership data to purchases format
       const purchasesData = (membershipData || []).map(m => ({
         id: m.id,
+        groupId: m.subscription_groups?.id,
         service: m.subscription_groups?.services?.slug || 'unknown',
         name: m.subscription_groups?.services?.name || 'Servicio',
         plan: '1 Mes',
         price: m.subscription_groups?.price_per_slot || 0,
         renewal: m.subscription_groups?.next_payment_date || new Date().toISOString(),
-        status: m.payment_status === 'paid' ? 'active' : 'pending'
+        status: m.payment_status === 'paid' ? 'active' : 'pending',
+        login: m.subscription_groups?.credentials_login,
+        password: m.subscription_groups?.credentials_password
       }))
       setPurchases(purchasesData)
 
@@ -282,13 +287,17 @@ const DashboardPage = () => {
                     <>
                       {purchases.length > 0 ? (
                         purchases.map(sub => (
-                            <div key={sub.id} className="bg-white p-4 sm:p-6 rounded-[20px] shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 group hover:border-[#EF534F]/30 transition-all">
+                            <Link 
+                                key={sub.id} 
+                                to={sub.groupId ? `/group/${sub.groupId}` : '#'}
+                                className="bg-white p-4 sm:p-6 rounded-[20px] shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 group hover:border-[#EF534F]/30 transition-all cursor-pointer"
+                            >
                                 <div className="flex items-center gap-4 w-full sm:w-auto">
                                     <div className="w-14 h-14 bg-gray-50 rounded-xl p-2 flex items-center justify-center border border-gray-100">
                                         <img src={getLogoUrl(sub.service)} alt={sub.name} className="w-full h-full object-contain" />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-gray-900 text-lg">{sub.name}</h3>
+                                        <h3 className="font-bold text-gray-900 text-lg group-hover:text-[#EF534F] transition-colors">{sub.name}</h3>
                                         <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
                                             <span className={`px-2 py-0.5 rounded-md ${sub.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                                               {sub.status === 'active' ? 'Activo' : 'Pendiente'}
@@ -298,16 +307,32 @@ const DashboardPage = () => {
                                     </div>
                                 </div>
                                 
-                                <div className="flex items-center justify-between w-full sm:w-auto gap-8">
-                                    <div className="text-right">
+                                <div className="flex flex-col sm:flex-row items-center justify-between w-full sm:w-auto gap-4 sm:gap-8">
+                                    <div className="text-center sm:text-right">
                                         <p className="font-black text-gray-900 text-xl">€{sub.price.toFixed(2)}</p>
                                         <p className="text-xs text-gray-400">/{sub.plan}</p>
                                     </div>
-                                    <button className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:text-[#EF534F] group-hover:bg-[#EF534F]/10 transition-all">
-                                        <ChevronRight className="w-5 h-5" />
-                                    </button>
+                                    
+                                    <div className="flex items-center gap-2">
+                                        {sub.status === 'active' && (
+                                            <button 
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    setEditingCreds(sub.id + '_view');
+                                                }}
+                                                className="px-4 py-2 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors flex items-center gap-2"
+                                            >
+                                                <Zap className="w-3.5 h-3.5" />
+                                                Ver Acceso
+                                            </button>
+                                        )}
+                                        <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:text-[#EF534F] group-hover:bg-[#EF534F]/10 transition-all">
+                                            <ChevronRight className="w-5 h-5" />
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            </Link>
                         ))
                       ) : (
                         <div className="text-center py-12 bg-white rounded-[20px] border border-gray-100">
@@ -391,38 +416,57 @@ const DashboardPage = () => {
 
         {/* Credentials Edit Modal */}
         {editingCreds && (
-            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
-                    <h3 className="text-xl font-bold text-gray-900 mb-4">Actualizar Credenciales</h3>
-                    <p className="text-sm text-gray-500 mb-6">
-                        Estas credenciales son las que verán los usuarios que paguen por unirse a tu grupo.
-                    </p>
-
-                    <div className="space-y-4">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Usuario / Email</label>
-                            <input 
-                                type="text" 
-                                value={credsForm.login}
-                                onChange={(e) => setCredsForm({...credsForm, login: e.target.value})}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#EF534F] focus:ring-1 focus:ring-[#EF534F]"
-                                placeholder="ej: usuario@email.com"
-                            />
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white rounded-[24px] w-full max-w-md p-8 shadow-2xl animate-in fade-in zoom-in duration-200 border border-gray-100">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${editingCreds.toString().endsWith('_view') ? 'bg-indigo-50 text-indigo-600' : 'bg-red-50 text-[#EF534F]'}`}>
+                            <Shield className={`w-6 h-6`} />
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Contraseña</label>
+                            <h3 className="text-xl font-black text-gray-900">
+                                {editingCreds.toString().endsWith('_view') ? 'Credenciales de Acceso' : 'Gestionar Acceso'}
+                            </h3>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                {editingCreds.toString().endsWith('_view') ? 'Información Confidencial' : 'Editar Datos del Grupo'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-5">
+                        <div className="group">
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Email de la cuenta</label>
+                            <div className="relative">
+                                <input 
+                                    type="text" 
+                                    value={editingCreds.toString().endsWith('_view') ? (purchases.find(p => p.id + '_view' === editingCreds)?.login || 'No disponible') : credsForm.login}
+                                    readOnly={editingCreds.toString().endsWith('_view')}
+                                    onChange={(e) => setCredsForm({...credsForm, login: e.target.value})}
+                                    className={`w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-medium focus:outline-none transition-all ${editingCreds.toString().endsWith('_view') ? 'cursor-text' : 'focus:border-[#EF534F] focus:ring-4 focus:ring-red-50'}`}
+                                />
+                                {editingCreds.toString().endsWith('_view') && (
+                                    <button 
+                                        onClick={() => navigator.clipboard.writeText(purchases.find(p => p.id + '_view' === editingCreds)?.login)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-indigo-500 hover:text-indigo-700 bg-indigo-50 px-2 py-1 rounded"
+                                    >
+                                        COPIAR
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                        <div className="group">
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Contraseña</label>
                             <div className="relative">
                                 <input 
                                     type={showPassword ? "text" : "password"}
-                                    value={credsForm.password}
+                                    value={editingCreds.toString().endsWith('_view') ? (purchases.find(p => p.id + '_view' === editingCreds)?.password || '••••••••') : credsForm.password}
+                                    readOnly={editingCreds.toString().endsWith('_view')}
                                     onChange={(e) => setCredsForm({...credsForm, password: e.target.value})}
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#EF534F] focus:ring-1 focus:ring-[#EF534F]"
-                                    placeholder="••••••••"
+                                    className={`w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-medium focus:outline-none transition-all ${editingCreds.toString().endsWith('_view') ? 'cursor-text' : 'focus:border-[#EF534F] focus:ring-4 focus:ring-red-50'}`}
                                 />
                                 <button 
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-900 text-[10px] font-black tracking-widest"
                                 >
                                     {showPassword ? "OCULTAR" : "VER"}
                                 </button>
@@ -430,21 +474,35 @@ const DashboardPage = () => {
                         </div>
                     </div>
 
-                    <div className="mt-8 flex gap-3">
-                        <button 
-                            onClick={() => setEditingCreds(null)}
-                            className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition-colors"
-                        >
-                            Cancelar
-                        </button>
-                        <button 
-                            onClick={saveCreds}
-                            disabled={savingCreds}
-                            className="flex-1 py-3 bg-[#EF534F] text-white font-bold rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50 flex justify-center items-center"
-                        >
-                            {savingCreds ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Guardar Cambios'}
-                        </button>
-                    </div>
+                    {!editingCreds.toString().endsWith('_view') ? (
+                        <div className="mt-8 flex gap-3">
+                            <button 
+                                onClick={() => setEditingCreds(null)}
+                                className="flex-1 py-4 bg-gray-50 text-gray-500 font-bold rounded-2xl hover:bg-gray-100 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={saveCreds}
+                                disabled={savingCreds}
+                                className="flex-1 py-4 bg-[#EF534F] text-white font-bold rounded-2xl hover:shadow-lg hover:shadow-red-200 transition-all disabled:opacity-50 flex justify-center items-center"
+                            >
+                                {savingCreds ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Guardar Datos'}
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="mt-8">
+                            <button 
+                                onClick={() => { setEditingCreds(null); setShowPassword(false); }}
+                                className="w-full py-4 bg-gray-900 text-white font-bold rounded-2xl hover:bg-black transition-all shadow-xl shadow-gray-200"
+                            >
+                                Cerrar
+                            </button>
+                            <p className="text-center text-[10px] text-gray-400 mt-4 font-medium uppercase tracking-widest">
+                                No compartas estos datos con nadie
+                            </p>
+                        </div>
+                    )}
                 </div>
             </div>
         )}

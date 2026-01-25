@@ -260,7 +260,7 @@ const ExplorePage = () => {
                     return (
                       <Link
                         key={group.id}
-                        to={`/services/${service?.slug || 'unknown'}`}
+                        to={`/group/${group.id}`}
                         className="block bg-white p-4 sm:p-6 rounded-[20px] shadow-sm border border-gray-100 hover:border-[#EF534F]/30 transition-all group"
                       >
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
