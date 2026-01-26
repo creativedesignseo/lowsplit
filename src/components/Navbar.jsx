@@ -77,8 +77,8 @@ const Navbar = () => {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className={`flex items-center gap-2 px-5 py-2 rounded-full text-white font-bold text-sm transition-all
-                    ${isActive ? 'bg-white text-[#EF534F] shadow-sm' : 'hover:bg-white/10'}`}
+                  className={`flex items-center gap-2 px-5 py-2 rounded-full font-bold text-sm transition-all
+                    ${isActive ? 'bg-white text-[#EF534F] shadow-sm' : 'text-white hover:bg-white/10'}`}
                 >
                   <IconComponent className={`w-4 h-4 ${isActive ? 'text-[#EF534F]' : 'text-white'}`} strokeWidth={2.5} />
                   <span className="">{link.label}</span>

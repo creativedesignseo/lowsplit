@@ -97,7 +97,7 @@ const HomePage = () => {
       </Helmet>
 
       {/* Hero Section */}
-      <section style={{ background: '#EF534F' }} className="pt-16">
+      <section style={{ background: '#EF534F' }} className="pt-0">
         <div className="max-w-[1440px] mx-auto px-4 py-12">
           <div className="flex flex-col items-center gap-2 max-w-[1000px] mx-auto text-center mb-8">
             <h1 className="text-white font-medium text-2xl sm:text-3xl lg:text-[32px]">

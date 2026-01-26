@@ -44,6 +44,17 @@ export const MOCK_SERVICES = [
     features: ['Sin Anuncios', 'Segundo Plano', 'YouTube Music', 'Descargas']
   },
   {
+    id: '13',
+    name: 'Amazon Prime',
+    slug: 'amazon-prime',
+    category: 'streaming',
+    description: 'Envíos rápidos, Prime Video, Amazon Music y más.',
+    total_price: 4.99,
+    max_slots: 3,
+    color: '#00A8E1',
+    features: ['Envíos Gratis', 'Prime Video', 'Amazon Music', 'Prime Gaming']
+  },
+  {
     id: '5',
     name: 'HBO Max',
     slug: 'hbo', // mapped to hbo-max in utils? need to align

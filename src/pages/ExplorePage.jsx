@@ -112,7 +112,7 @@ const ExplorePage = () => {
         <meta name="description" content="Explora Netflix, Spotify, Disney+ y más. Encuentra suscripciones compartidas y ahorra hasta un 75%." />
       </Helmet>
 
-      <div className="min-h-screen bg-[#FAFAFA] pt-[70px]">
+      <div className="min-h-screen bg-[#FAFAFA] pt-[64px]">
         {/* Header */}
         <div className="bg-[#EF534F] py-16 relative overflow-hidden">
              {/* Background Pattern */}
