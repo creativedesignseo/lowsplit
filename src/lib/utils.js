@@ -4,6 +4,16 @@ export const getLogoUrl = (slug, type = 'icon') => {
   if (slug.includes('netflix')) {
       return type === 'full' ? '/logos/netflix.svg' : '/logos/icon-netflix.svg'
   }
+  
+  // 2. Local overrides for Prime Video
+  if (slug.includes('prime') || slug.includes('amazon')) {
+      return type === 'full' ? '/logos/primevideo.svg' : '/logos/icon-primevideo.svg'
+  }
+
+  // 3. Local overrides for Spotify
+  if (slug.includes('spotify')) {
+      return type === 'full' ? '/logos/spotify.svg' : '/logos/icon-spotify.svg'
+  }
 
   // 2. Mapped URLs (mostly square icons)
   const urls = {

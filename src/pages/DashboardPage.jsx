@@ -356,7 +356,7 @@ const DashboardPage = () => {
                     <>
                        {sales.length > 0 ? (
                            sales.map(group => (
-                              <div key={group.id} className="bg-white p-4 sm:p-6 rounded-[20px] shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 group hover:border-[#EF534F]/30 transition-all">
+                              <Link key={group.id} to={`/group/${group.id}`} className="bg-white p-4 sm:p-6 rounded-[20px] shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 group hover:border-[#EF534F]/30 transition-all cursor-pointer">
                                   <div className="flex items-center gap-4 w-full sm:w-auto">
                                       <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden relative">
                                           <img src={getLogoUrl(group.service)} alt={group.name} className="w-full h-full object-cover" />
@@ -375,7 +375,11 @@ const DashboardPage = () => {
                                           
                                           {/* Manage Creds Button (Only for Owners) */}
                                           <button 
-                                            onClick={() => handleEditCreds(group)}
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                handleEditCreds(group);
+                                            }}
                                             className="text-xs font-bold text-[#EF534F] hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-full transition-colors"
                                           >
                                               Gestionar Acceso 🔒
@@ -388,11 +392,11 @@ const DashboardPage = () => {
                                           <p className="font-black text-green-600 text-xl">+€{group.earnings.toFixed(2)}</p>
                                           <p className="text-xs text-gray-400">mensuales</p>
                                       </div>
-                                      <button className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:text-[#EF534F] group-hover:bg-[#EF534F]/10 transition-all">
+                                      <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:text-[#EF534F] group-hover:bg-[#EF534F]/10 transition-all">
                                           <ChevronRight className="w-5 h-5" />
-                                      </button>
+                                      </div>
                                   </div>
-                              </div>
+                              </Link>
                            ))
                        ) : (
                           <div className="text-center py-12 bg-white rounded-[20px] border border-gray-100">
