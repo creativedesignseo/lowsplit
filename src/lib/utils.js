@@ -15,6 +15,11 @@ export const getLogoUrl = (slug, type = 'icon') => {
       return type === 'full' ? '/logos/spotify.svg' : '/logos/icon-spotify.svg'
   }
 
+  // 4. Local overrides for Apple One
+  if (slug.includes('apple')) {
+      return type === 'full' ? '/logos/apple-one.svg' : '/logos/icon-apple-one.svg'
+  }
+
   // 2. Mapped URLs (mostly square icons)
   const urls = {
     spotify: "https://static.gamsgocdn.com/image/6d47adc2ee2ff09b0619c243178fd0e0.webp",
