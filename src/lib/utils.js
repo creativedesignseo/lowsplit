@@ -1,7 +1,12 @@
 
-export const getLogoUrl = (slug) => {
+export const getLogoUrl = (slug, type = 'icon') => {
+  // 1. Local overrides for Netflix
+  if (slug.includes('netflix')) {
+      return type === 'full' ? '/logos/netflix.svg' : '/logos/icon-netflix.svg'
+  }
+
+  // 2. Mapped URLs (mostly square icons)
   const urls = {
-    netflix: "https://static.gamsgocdn.com/image/91799256976660d1b3297a7a14e91244.webp",
     spotify: "https://static.gamsgocdn.com/image/6d47adc2ee2ff09b0619c243178fd0e0.webp",
     youtube: "https://static.gamsgocdn.com/image/e77cda6be20a7932313652873177810b.webp",
     disney: "https://static.gamsgocdn.com/image/c6946da9047029676579ae2089851610.webp",
@@ -13,7 +18,7 @@ export const getLogoUrl = (slug) => {
     duolingo: "https://static.gamsgocdn.com/image/05634865f33f6312a0212f71661d9a2a.png", 
     canva: "https://static.gamsgocdn.com/image/fc7f17424683070732817d230182559e.png"
   }
-  // Loose matching for slugs like 'netflix-premium' -> 'netflix'
+  
   const key = Object.keys(urls).find(k => slug.includes(k))
   return key ? urls[key] : null
 }

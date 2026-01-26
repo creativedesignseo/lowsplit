@@ -265,11 +265,11 @@ const ExplorePage = () => {
                       >
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                           <div className="flex items-center gap-4">
-                            <div className="w-14 h-14 bg-gray-50 rounded-xl p-2 flex items-center justify-center border border-gray-100">
+                            <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden relative">
                               <img 
                                 src={getLogoUrl(service?.slug)} 
                                 alt={service?.name} 
-                                className="w-full h-full object-contain" 
+                                className="w-full h-full object-cover" 
                               />
                             </div>
                             <div>

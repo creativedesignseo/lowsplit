@@ -137,8 +137,16 @@ const ServiceDetailPage = () => {
     }
   }
   
+  // Filters State
+  const [filters, setFilters] = useState({
+      planType: 'all',
+      verified: false,
+      instant: false,
+      sortBy: 'price'
+  })
+
   // Fetch specific service from Supabase
-  const { data: service, isLoading, error } = useQuery({
+  const { data: service, isLoading: isLoadingService, error: errorService } = useQuery({
     queryKey: ['service', slug],
     queryFn: async () => {
       // 1. Try to find in MOCK_SERVICES first (for demo speed/reliability)
@@ -158,42 +166,54 @@ const ServiceDetailPage = () => {
     initialData: () => MOCK_SERVICES.find(s => s.slug === slug || s.slug.includes(slug))
   })
 
-  // Dynamic Plans Calculation
+  // Fetch Available Groups for this Service
+  const { data: groups, isLoading: isLoadingGroups } = useQuery({
+      queryKey: ['groups', service?.id, filters],
+      enabled: !!service,
+      queryFn: async () => {
+          let query = supabase
+              .from('subscription_groups')
+              .select(`
+                  *,
+                  admin:profiles!admin_id (id, full_name, avatar_url, reputation_score)
+              `)
+              .eq('service_id', service.id)
+              .eq('status', 'available')
+          
+          if (filters.verified) query = query.eq('invoice_verified', true)
+          if (filters.instant) query = query.eq('instant_acceptance', true)
+          
+          const { data, error } = await query
+          if (error) {
+              console.warn("Could not fetch groups (possibly missing columns):", error)
+              return [] 
+          }
+          
+          // Client-side sorting because some fields might be calculated or JSON
+          let sortedData = data || []
+          if (filters.sortBy === 'price') sortedData.sort((a, b) => a.price_per_slot - b.price_per_slot)
+          if (filters.sortBy === 'reputation') sortedData.sort((a, b) => (b.admin?.reputation_score || 0) - (a.admin?.reputation_score || 0))
+
+          return sortedData
+      }
+  })
+
+  // Dynamic Plans Calculation (for Official Stock reference)
   const plans = service ? (() => {
     const monthlyPrice = parseFloat(calculateSlotPrice(service.total_price, service.max_slots))
-    
     return [
       { id: 1, months: 1, label: '1 Mes', pricePerMonth: monthlyPrice * 1.2, totalPrice: monthlyPrice * 1.2, save: 0 },
-      { id: 2, months: 6, label: '6 Meses', pricePerMonth: monthlyPrice * 0.95, totalPrice: monthlyPrice * 6 * 0.95, save: 15, popular: true },
-      { id: 3, months: 12, label: '12 Meses', pricePerMonth: monthlyPrice * 0.85, totalPrice: monthlyPrice * 12 * 0.85, save: 25 },
     ]
   })() : []
 
   useEffect(() => {
     if (plans.length > 0 && !selectedPlan) {
-      setSelectedPlan(plans.find(p => p.popular) || plans[0])
+      setSelectedPlan(plans[0])
     }
   }, [plans, selectedPlan])
 
-  // Mock Recent Buyers
-  const [currentBuyerIndex, setCurrentBuyerIndex] = useState(0)
-  const recentBuyers = [
-      { name: 'm***is', time: 3 },
-      { name: 'j***an', time: 7 },
-      { name: 'c***os', time: 12 },
-      { name: 'l***na', time: 18 },
-  ]
-  const currentBuyer = recentBuyers[currentBuyerIndex]
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentBuyerIndex(prev => (prev + 1) % recentBuyers.length)
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [])
-
-
-  if (isLoading) {
+  if (isLoadingService) {
     return (
       <div className="min-h-screen pt-24 flex justify-center items-center bg-[#FAFAFA]">
         <Loader2 className="w-8 h-8 animate-spin text-[#EF534F]" />
@@ -201,7 +221,7 @@ const ServiceDetailPage = () => {
     )
   }
 
-  if (error || !service) {
+  if (errorService || !service) {
     return (
       <div className="min-h-screen pt-24 px-4 text-center bg-[#FAFAFA]">
         <AlertCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
@@ -234,208 +254,243 @@ const ServiceDetailPage = () => {
           </div>
         </div>
 
-        <div className="max-w-[1100px] mx-auto px-4 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="max-w-[1240px] mx-auto px-4 py-8">
+            <div className="flex flex-col lg:flex-row gap-8">
             
-            {/* LEFT COLUMN: Admin/Official Info (4 cols) */}
-            <div className="lg:col-span-4 space-y-6">
-              <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 relative overflow-hidden">
-                  {/* Banner accent */}
-                  <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-br from-red-50 to-orange-50 z-0"></div>
-                  
-                  <div className="relative z-10 flex flex-col items-center">
-                      <div className="relative mb-4">
-                          <div className="w-24 h-24 bg-white rounded-full border-4 border-white shadow-md flex items-center justify-center p-4">
-                              <img src="/logo.png" alt="LowSplit" className="w-full h-full object-contain opacity-20" />
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                  <ShieldCheck className="w-10 h-10 text-[#EF534F]" />
-                              </div>
-                          </div>
-                          <div className="absolute bottom-0 right-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white border-2 border-white shadow-sm">
-                              <Check className="w-4 h-4" />
-                          </div>
-                      </div>
-
-                      <h2 className="text-xl font-bold text-gray-900">LowSplit Oficial</h2>
-                      <p className="text-xs font-semibold text-[#EF534F] bg-red-50 px-3 py-1 rounded-full mt-2 uppercase tracking-wider">
-                          Stock de la plataforma
-                      </p>
-
-                      <div className="mt-6 w-full space-y-4">
-                          <div className="flex items-center gap-3 p-3 bg-green-50 rounded-xl border border-green-100">
-                              <ShieldCheck className="w-5 h-5 text-green-600" />
-                              <span className="text-xs font-bold text-green-700">Identidad Verificada</span>
-                          </div>
-                          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
-                              <Zap className="w-5 h-5 text-blue-600" />
-                              <span className="text-xs font-bold text-blue-700">Activación Inmediata</span>
-                          </div>
-                      </div>
-
-                      <div className="mt-6 pt-6 border-t border-gray-100 w-full space-y-3">
-                          <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Actividad</h3>
-                          <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">Miembro desde</span>
-                              <span className="font-bold text-gray-900">Octubre 2023</span>
-                          </div>
-                          <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">Reputación</span>
-                              <span className="font-bold text-green-600">100/100</span>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-
-              {/* Security info */}
-              <div className="bg-indigo-50/50 rounded-[20px] p-5 border border-indigo-100/50">
-                  <div className="flex gap-3">
-                      <Shield className="w-5 h-5 text-indigo-500 flex-shrink-0" />
-                      <div>
-                          <p className="text-sm font-bold text-indigo-900">Pago Protegido</p>
-                          <p className="text-xs text-indigo-700/70 mt-1 leading-relaxed">
-                              Tu dinero está seguro. Si el admin deja de pagar, te devolvemos la parte proporcional automáticamente.
-                          </p>
-                      </div>
-                  </div>
-              </div>
-            </div>
-
-            {/* RIGHT COLUMN: Service Info & Selection (8 cols) */}
-            <div className="lg:col-span-8">
-              <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 p-8">
-                
-                {/* Header Section */}
-                <div className="flex items-center gap-6 mb-10">
-                    <div className="w-20 h-20 bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center justify-center">
-                         {logoUrl ? <img src={logoUrl} alt={service.name} className="w-full h-full object-contain" /> : <span className="text-3xl">{getEmojiForSlug(service.slug)}</span>}
+            {/* SIDEBAR FILTERS */}
+            <div className="w-full lg:w-[320px] flex-shrink-0 space-y-8">
+                {/* Intro Card */}
+                <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 text-center">
+                    <div className="w-20 h-20 bg-white border border-gray-100 rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-4 overflow-hidden relative">
+                        {logoUrl ? (
+                            <img src={logoUrl} alt={service.name} className="w-full h-full object-cover" />
+                        ) : (
+                            <span className="text-3xl">{getEmojiForSlug(service.slug)}</span>
+                        )}
                     </div>
-                    <div>
-                        <h1 className="text-3xl font-black text-gray-900 mb-1">{service.name}</h1>
-                        <p className="text-gray-500 font-medium">Suscripción Premium Gestionada</p>
-                    </div>
+                    <h1 className="text-2xl font-black text-gray-900 mb-2">{service.name}</h1>
+                    <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                        Únete a un grupo verificado y ahorra hasta un 80% en tu suscripción mensual.
+                    </p>
                 </div>
 
-                {/* Plan Selection */}
-                <div className="mb-10">
-                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-4">Selecciona tu plan</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                        {plans.map(plan => (
-                            <button
-                                key={plan.id}
-                                onClick={() => setSelectedPlan(plan)}
-                                className={`relative p-5 rounded-2xl border-2 transition-all duration-300 flex flex-col items-center ${
-                                    selectedPlan?.id === plan.id 
-                                    ? 'border-[#7c7cff] bg-[#f7f7ff] ring-4 ring-indigo-50' 
-                                    : 'border-gray-50 hover:border-indigo-100 bg-gray-50/50'
-                                }`}
-                            >
-                                {plan.popular && (
-                                    <div className="absolute -top-3 px-3 py-1 bg-[#7c7cff] text-white text-[10px] font-bold rounded-full uppercase">Popular</div>
-                                )}
-                                <span className="text-sm font-bold text-gray-500 mb-1">{plan.label}</span>
-                                <div className="text-2xl font-black text-gray-900">€{plan.pricePerMonth.toFixed(2)}</div>
-                                <span className="text-[10px] text-gray-400 font-medium">por mes</span>
-                                {plan.save > 0 && <span className="mt-2 text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-md">-{plan.save}% Ahorro</span>}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                {/* Filters */}
+                <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
+                    <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
+                        <Monitor className="w-5 h-5 text-gray-400" /> 
+                        Filtros
+                    </h3>
 
-                <div className="border-t border-gray-100 pt-10">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-8">
+                    {/* Filter: Plan Type */}
+                    <div className="mb-8">
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-3">Tipo de Plan</label>
+                        <div className="flex flex-wrap gap-2">
+                            <button className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-full">Todos</button>
+                            <button className="px-4 py-2 bg-gray-100 text-gray-500 text-xs font-bold rounded-full hover:bg-gray-200 transition-colors">Premium</button>
+                            <button className="px-4 py-2 bg-gray-100 text-gray-500 text-xs font-bold rounded-full hover:bg-gray-200 transition-colors">Estándar</button>
+                        </div>
+                    </div>
+
+                    {/* Filter: Verified Invoice */}
+                    <div className="flex items-center justify-between mb-6">
                         <div>
-                            <p className="text-sm text-gray-400 mb-1">Precio total del periodo:</p>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-4xl font-black text-[#EF534F]">
-                                    €{selectedPlan?.totalPrice.toFixed(2)}
-                                </span>
-                                {selectedPlan?.months > 1 && <span className="text-sm text-gray-400 font-medium">/ cada {selectedPlan.months} meses</span>}
+                            <div className="flex items-center gap-2 mb-1">
+                                <ShieldCheck className="w-4 h-4 text-green-600" />
+                                <span className="font-bold text-gray-900 text-sm">Factura Verificada</span>
                             </div>
+                            <p className="text-xs text-gray-400 leading-tight">Solo grupos con recibo subido</p>
                         </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                className="sr-only peer"
+                                checked={filters.verified}
+                                onChange={(e) => setFilters(prev => ({ ...prev, verified: e.target.checked }))} 
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                        </label>
+                    </div>
 
-                        <div className="w-full sm:w-auto space-y-3">
-                            <button 
-                                onClick={handlePayment}
-                                disabled={isProcessingPayment || !selectedPlan}
-                                className="w-full sm:w-auto px-10 py-4 bg-[#1a1a1a] hover:bg-black text-white font-bold rounded-2xl shadow-xl shadow-gray-200 transition-all transform active:scale-95 flex items-center justify-center gap-3"
-                            >
-                                {isProcessingPayment ? <Loader2 className="w-5 h-5 animate-spin" /> : <><ShieldCheck className="w-5 h-5" /> Unirme ahora</>}
-                            </button>
-                            <button 
-                                onClick={() => setShowBizumModal(true)}
-                                className="w-full text-xs font-bold text-gray-400 hover:text-gray-900 transition-colors"
-                            >
-                                O pagar con Bizum →
-                            </button>
+                    {/* Filter: Instant Acceptance */}
+                    <div className="flex items-center justify-between mb-6">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <Zap className="w-4 h-4 text-yellow-500" fill="currentColor" />
+                                <span className="font-bold text-gray-900 text-sm">Aceptación Inmediata</span>
+                            </div>
+                            <p className="text-xs text-gray-400 leading-tight">Únete sin esperar aprobación</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                className="sr-only peer"
+                                checked={filters.instant}
+                                onChange={(e) => setFilters(prev => ({ ...prev, instant: e.target.checked }))}
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
+                        </label>
+                    </div>
+
+                     {/* Filter: Sort */}
+                     <div className="border-t border-gray-100 pt-6">
+                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-3">Ordenar por</label>
+                        <div className="space-y-1">
+                             <button className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
+                                <span>Índice de confianza</span>
+                                <ChevronLeft className="w-4 h-4 rotate-270 text-gray-300" />
+                             </button>
+                             <button className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
+                                <span>Tiempo de respuesta</span>
+                                <ChevronLeft className="w-4 h-4 rotate-270 text-gray-300" />
+                             </button>
+                             <button className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
+                                <span>Precio más bajo</span>
+                                <ChevronLeft className="w-4 h-4 rotate-270 text-gray-300" />
+                             </button>
                         </div>
                     </div>
                 </div>
-
-              </div>
             </div>
 
-            {/* Hub Section (Consistency with GroupDetailPage) */}
-            <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Members List (Left 4 cols to match top) */}
-                <div className="lg:col-span-4">
-                    <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 min-h-[400px]">
-                         <h3 className="text-sm font-black text-gray-900 mb-6 flex items-center gap-2 uppercase tracking-widest">
-                            <Users className="w-4 h-4 text-[#EF534F]" />
-                            Comunidad {service.name}
-                         </h3>
-                         <div className="space-y-4">
-                             <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100 italic text-gray-400 text-xs text-center">
-                                 Un catálogo oficial siempre está lleno de usuarios. Únete para ver a tus compañeros de grupo.
+            {/* MAIN LIST: Available Groups */}
+            <div className="flex-1 space-y-4">
+                
+                {/* Official LowSplit Card (Pinned) */}
+                <div className="bg-white rounded-[24px] p-4 pr-6 shadow-sm border border-red-50 flex flex-col sm:flex-row items-center gap-6 group hover:shadow-md transition-all relative overflow-hidden mb-6">
+                     {/* "Official" Badge Banner */}
+                     <div className="absolute top-0 right-0 bg-red-50 text-[#EF534F] text-[10px] font-black px-4 py-1.5 rounded-bl-2xl uppercase tracking-widest z-10">
+                        Recomendado
+                     </div>
+                     
+                     {/* Thick Red Bar */}
+                     <div className="absolute left-3 top-3 bottom-3 w-1.5 bg-[#EF534F] rounded-full"></div>
+                     
+                     {/* Logo Section */}
+                     <div className="pl-6 pt-2 sm:pt-0">
+                        <div className="w-16 h-16 rounded-full border-2 border-[#EF534F] p-1 flex items-center justify-center bg-white shadow-sm relative">
+                             <img src="/logo.png" className="w-full h-full object-contain rounded-full" alt="LowSplit" />
+                             <div className="absolute -bottom-1 -right-1 bg-[#EF534F] text-white rounded-full p-0.5 border-2 border-white">
+                                <ShieldCheck className="w-3 h-3" />
                              </div>
-                             {/* Mock Members for Official Stock */}
-                             {[...Array(3)].map((_, i) => (
-                                <div key={i} className="flex items-center gap-3 opacity-60">
-                                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center border border-gray-200">
-                                         <User className="w-5 h-5 text-gray-400" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-gray-700">Miembro {100 + i}</p>
-                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Verificado</p>
-                                    </div>
-                                </div>
-                             ))}
-                             <div className="pt-4 flex items-center gap-3 text-[#EF534F]">
-                                 <Plus className="w-10 h-10 p-2.5 rounded-full bg-red-50 border-2 border-dashed border-red-200" />
-                                 <span className="text-xs font-black uppercase tracking-widest">Tú aquí</span>
-                             </div>
-                         </div>
-                    </div>
-                </div>
+                        </div>
+                     </div>
 
-                {/* Chat Area (Right 8 cols to match top) */}
-                <div className="lg:col-span-8">
-                     <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 flex flex-col min-h-[500px] relative overflow-hidden">
-                         <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-                            <div className="w-40 h-40 bg-gray-50 rounded-full flex items-center justify-center mb-8 relative">
-                                <MessageSquareText className="w-16 h-16 text-gray-200" />
-                                <div className="absolute -top-2 -right-2 w-10 h-10 bg-[#EF534F]/10 rounded-full flex items-center justify-center">
-                                    <Smile className="w-5 h-5 text-[#EF534F]" />
-                                </div>
+                     {/* Content Section */}
+                     <div className="flex-1 text-center sm:text-left space-y-2">
+                        <div className="flex items-center justify-center sm:justify-start gap-2">
+                            <h3 className="text-xl font-black text-gray-900">LowSplit Oficial</h3>
+                            <ShieldCheck className="w-5 h-5 text-[#EF534F]" fill="#FEF2F2" />
+                        </div>
+                        <div className="flex flex-wrap justify-center sm:justify-start items-center gap-2">
+                            <span className="flex items-center gap-1.5 bg-green-50 text-green-700 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wide border border-green-100">
+                                <ShieldCheck className="w-3.5 h-3.5" /> Factura Verificada
+                            </span>
+                            <span className="flex items-center gap-1.5 bg-blue-50 text-blue-700 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-wide border border-blue-100">
+                                <Zap className="w-3.5 h-3.5" /> Automático
+                            </span>
+                        </div>
+                     </div>
+
+                     {/* Price & Action Section */}
+                     <div className="flex items-center gap-6 pl-0 sm:pl-6 border-l-0 sm:border-l border-gray-100 w-full sm:w-auto justify-between sm:justify-end">
+                        <div className="text-right">
+                            <div className="text-2xl font-black text-[#EF534F]">
+                                €{(selectedPlan?.pricePerMonth || 3.99).toFixed(2)}
                             </div>
-                            <h3 className="text-2xl font-black text-gray-900 mb-2">Muro de LowSplit</h3>
-                            <p className="text-gray-500 max-w-[340px] text-sm leading-relaxed mx-auto">
-                                Una vez te unas, podrás hablar con nuestro equipo de soporte y otros miembros en este chat privado.
-                            </p>
-                         </div>
-
-                         <div className="p-6 bg-gray-50/50 border-t border-gray-100">
-                             <div className="flex items-center gap-4 bg-white border border-gray-200 rounded-[24px] p-2 pl-6 opacity-40 cursor-not-allowed">
-                                 <Smile className="w-6 h-6 text-gray-300" />
-                                 <span className="flex-1 text-gray-300 font-medium py-3 text-sm">Debes unirte al grupo para participar...</span>
-                                 <div className="bg-gray-200 text-white p-3.5 rounded-2xl flex items-center justify-center">
-                                    <Send className="w-5 h-5" />
-                                 </div>
-                             </div>
-                         </div>
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest block -mt-1">/mes</span>
+                        </div>
+                        <button 
+                            onClick={handlePayment} 
+                            className="bg-[#111111] hover:bg-black text-white px-8 py-3 rounded-xl font-bold text-sm shadow-xl shadow-gray-200 transition-transform transform active:scale-95"
+                        >
+                            Unirme
+                        </button>
                      </div>
                 </div>
+
+                {/* User Groups List */}
+                {groups && groups.length > 0 ? (
+                    groups.map((group) => (
+                    <div key={group.id} className="bg-white rounded-[24px] p-4 shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center gap-4 group hover:border-[#EF534F]/30 hover:shadow-md transition-all">
+                        
+                        {/* User Info */}
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                            <div className="relative">
+                                {/* Dynamic Gradient Border based on score */}
+                                <div className={`w-16 h-16 rounded-full p-[2px] ${
+                                    (group.admin?.reputation_score || 0) >= 90 ? 'bg-gradient-to-tr from-blue-400 to-cyan-300' :
+                                    (group.admin?.reputation_score || 0) >= 70 ? 'bg-gradient-to-tr from-pink-500 to-purple-400' :
+                                    'bg-gray-100'
+                                }`}>
+                                    <div className="w-full h-full rounded-full bg-white p-0.5 overflow-hidden">
+                                        {group.admin?.avatar_url ? (
+                                            <img src={group.admin.avatar_url} alt={group.admin.full_name} className="w-full h-full object-cover rounded-full" />
+                                        ) : (
+                                            <div className="w-full h-full bg-gray-50 flex items-center justify-center">
+                                                <User className="w-6 h-6 text-gray-300" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                {/* Score Badge */}
+                                {group.admin?.reputation_score && (
+                                    <div className={`absolute -bottom-1 -right-1 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border-2 border-white ${
+                                        group.admin.reputation_score >= 90 ? 'bg-cyan-500' : 'bg-pink-500'
+                                    }`}>
+                                        {group.admin.reputation_score}
+                                    </div>
+                                )}
+                            </div>
+                            
+                            <div className="flex-1">
+                                <h3 className="text-base font-black text-gray-900 flex items-center gap-2">
+                                    {group.admin?.full_name || 'Usuario'}
+                                    <span className={`w-2 h-2 rounded-full ${group.invoice_verified ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                                </h3>
+                                <p className="text-xs text-gray-500 font-medium mt-0.5">está compartiendo <span className="text-gray-900 font-bold">{service.name}</span></p>
+                                
+                                {group.invoice_verified && (
+                                    <div className="mt-2 inline-flex items-center gap-1 bg-[#00C48C] text-white text-[10px] font-bold px-2.5 py-1 rounded-[4px] uppercase tracking-wide shadow-sm shadow-green-200">
+                                        <Check className="w-3 h-3" strokeWidth={4} /> Factura Verificada
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Spacer */}
+                        <div className="flex-1"></div>
+
+                        {/* Price & Action */}
+                        <div className="flex items-center justify-between w-full sm:w-auto gap-8 pl-0 sm:pl-8 border-t sm:border-0 border-gray-50 pt-4 sm:pt-0">
+                             <div className="text-right">
+                                <div className="text-2xl font-black text-gray-900 flex items-center gap-2">
+                                    {group.instant_acceptance && <Zap className="w-5 h-5 text-yellow-400" fill="currentColor" />}
+                                    €{group.price_per_slot.toFixed(2)}
+                                </div>
+                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest block -mt-1">/mes</span>
+                             </div>
+                             <Link to={`/group/${group.id}`} className="bg-[#111111] hover:bg-black text-white px-8 py-3 rounded-xl font-bold text-sm shadow-xl shadow-gray-200 transition-transform transform active:scale-95">
+                                Únete
+                             </Link>
+                        </div>
+                    </div>
+                ))
+               ) : (
+                <div className="text-center py-12 bg-white rounded-[24px] border border-gray-100 border-dashed">
+                    <p className="text-gray-400 mb-2">No hay grupos disponibles con estos filtros.</p>
+                    <button 
+                        onClick={() => setFilters({ planType: 'all', verified: false, instant: false, sortBy: 'price' })}
+                        className="text-[#EF534F] text-sm font-bold hover:underline"
+                    >
+                        Limpiar filtros
+                    </button>
+                </div>
+               )}
+
             </div>
-          </div>
+            
+            </div>
         </div>
       </div>
 

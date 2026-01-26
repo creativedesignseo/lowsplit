@@ -20,7 +20,11 @@ const ProfilePage = () => {
 
   // Edit States
   const [isEditingName, setIsEditingName] = useState(false)
-  const [newName, setNewName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  
+  const [isEditingBirthDate, setIsEditingBirthDate] = useState(false)
+  const [birthDate, setBirthDate] = useState('')
   
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [passwordForm, setPasswordForm] = useState({ current: '', new: '', confirm: '' })
@@ -77,7 +81,17 @@ const ProfilePage = () => {
 
       if (data) {
         setProfile(data)
-        setNewName(data.full_name || '')
+        // Split name logic
+        const fullName = data.full_name || ''
+        const lastSpaceIndex = fullName.lastIndexOf(' ')
+        if (lastSpaceIndex !== -1) {
+            setFirstName(fullName.substring(0, lastSpaceIndex))
+            setLastName(fullName.substring(lastSpaceIndex + 1))
+        } else {
+            setFirstName(fullName)
+            setLastName('')
+        }
+        setBirthDate(data.birth_date || '')
       }
     } catch (error) {
       console.error('Error loading profile', error)
@@ -89,21 +103,43 @@ const ProfilePage = () => {
 
   const updateProfile = async () => {
     try {
+      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim()
+      
       const { error } = await supabase
         .from('profiles')
         .update({
-          full_name: newName,
+          full_name: fullName,
           updated_at: new Date(),
         })
         .eq('id', session.user.id)
 
       if (error) throw error
-      setProfile({ ...profile, full_name: newName })
+      setProfile({ ...profile, full_name: fullName })
       setIsEditingName(false)
       showToast('Nombre actualizado correctamente')
     } catch (error) {
       console.error('Error updating profile:', error)
       showToast(`Error: ${error.message}`, 'error')
+    }
+  }
+
+  const updateBirthDate = async () => {
+    try {
+        const { error } = await supabase
+            .from('profiles')
+            .update({
+                birth_date: birthDate,
+                updated_at: new Date(),
+            })
+            .eq('id', session.user.id)
+
+        if (error) throw error
+        setProfile({ ...profile, birth_date: birthDate })
+        setIsEditingBirthDate(false)
+        showToast('Fecha de nacimiento actualizada')
+    } catch (error) {
+        console.error('Error updating birth date:', error)
+        showToast(`Error: ${error.message}`, 'error')
     }
   }
 
@@ -459,19 +495,35 @@ const ProfilePage = () => {
               
               {isEditingName ? (
                 <div className="space-y-4">
-                  <input 
-                    type="text" 
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    className="w-full border-b border-gray-300 py-2 focus:outline-none focus:border-[#EF534F] text-lg"
-                    placeholder="Tu nombre"
-                  />
+                  <div className="grid grid-cols-2 gap-4">
+                      <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Nombre</label>
+                          <input 
+                            type="text" 
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            className="w-full border-b border-gray-300 py-2 focus:outline-none focus:border-[#EF534F] text-lg"
+                            placeholder="Nombre"
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-xs font-medium text-gray-500 mb-1">Apellido</label>
+                          <input 
+                            type="text" 
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            className="w-full border-b border-gray-300 py-2 focus:outline-none focus:border-[#EF534F] text-lg"
+                            placeholder="Apellido"
+                          />
+                      </div>
+                  </div>
+                  
                   <div className="flex items-center gap-3">
                     <button 
                       onClick={updateProfile}
                       className="px-6 py-2 bg-[#EF534F] text-white rounded-full text-sm font-bold hover:opacity-90 transition-opacity"
                     >
-                      Preservar
+                      Validar
                     </button>
                     <button 
                       onClick={() => setIsEditingName(false)}
@@ -483,7 +535,12 @@ const ProfilePage = () => {
                 </div>
               ) : (
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600 text-lg">{profile?.full_name || 'Sin nombre definido'}</span>
+                  <div>
+                    <span className="text-gray-600 text-lg block">{profile?.full_name || 'Sin nombre definido'}</span>
+                    <span className="text-xs text-gray-400 mt-1 block">
+                      Registrado en LowSplit desde {new Date(session?.user?.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </span>
+                  </div>
                   <button 
                     onClick={() => setIsEditingName(true)}
                     className="text-gray-900 font-bold underline text-sm hover:text-[#EF534F] transition-colors"
@@ -492,6 +549,48 @@ const ProfilePage = () => {
                   </button>
                 </div>
               )}
+            </div>
+
+            {/* Birth Date (New) */}
+            <div className="bg-white p-8 rounded-[20px] shadow-sm flex flex-col justify-between min-h-[160px]">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Fecha de nacimiento</h3>
+                
+                {isEditingBirthDate ? (
+                     <div className="space-y-4">
+                        <input 
+                            type="date" 
+                            value={birthDate}
+                            onChange={(e) => setBirthDate(e.target.value)}
+                            className="w-full border-b border-gray-300 py-2 focus:outline-none focus:border-[#EF534F] text-lg"
+                        />
+                        <div className="flex items-center gap-3">
+                            <button 
+                            onClick={updateBirthDate}
+                            className="px-6 py-2 bg-[#EF534F] text-white rounded-full text-sm font-bold hover:opacity-90 transition-opacity"
+                            >
+                            Validar
+                            </button>
+                            <button 
+                            onClick={() => setIsEditingBirthDate(false)}
+                            className="text-gray-500 text-sm hover:text-gray-700 underline"
+                            >
+                            Cancelar
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex justify-between items-center">
+                        <span className="text-gray-600 text-lg">
+                            {profile?.birth_date ? new Date(profile.birth_date).toLocaleDateString() : 'No definida'}
+                        </span>
+                        <button 
+                            onClick={() => setIsEditingBirthDate(true)}
+                            className="text-gray-900 font-bold underline text-sm hover:text-[#EF534F] transition-colors"
+                        >
+                            Editar
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Email Card (Simplified) */}

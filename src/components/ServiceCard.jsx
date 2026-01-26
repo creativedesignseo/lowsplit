@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
-import { getEmojiForSlug, calculateSlotPrice } from '../lib/utils'
+import { getEmojiForSlug, calculateSlotPrice, getLogoUrl } from '../lib/utils'
 
 const ServiceCard = ({ service }) => {
   const [expanded, setExpanded] = useState(false)
@@ -21,18 +21,7 @@ const ServiceCard = ({ service }) => {
   const logoEmoji = getEmojiForSlug(service.slug)
   const features = service.features || []
 
-  // Mapping slug to image URLs for better fidelity (mock implementation)
-  const getLogoUrl = (slug) => {
-    const urls = {
-        netflix: "https://static.gamsgocdn.com/image/91799256976660d1b3297a7a14e91244.webp",
-        spotify: "https://static.gamsgocdn.com/image/6d47adc2ee2ff09b0619c243178fd0e0.webp",
-        youtube: "https://static.gamsgocdn.com/image/e77cda6be20a7932313652873177810b.webp",
-        disney: "https://static.gamsgocdn.com/image/c6946da9047029676579ae2089851610.webp"
-    }
-    return urls[slug] || null
-  }
-
-  const logoUrl = getLogoUrl(service.slug)
+  const logoUrl = getLogoUrl(service.slug, 'full')
 
   return (
     <div className="spu-card-wrapper w-full h-full">
@@ -44,7 +33,7 @@ const ServiceCard = ({ service }) => {
                 {/* TOP BOX: Logo */}
                 <div className="spu-card-top-box relative h-[120px] flex items-center justify-center bg-white z-10">
                     {logoUrl ? (
-                        <img className="spu-logo w-16 h-16 object-contain z-10" src={logoUrl} alt={service.name} loading="lazy" />
+                         <img className="spu-logo h-12 w-auto max-w-[80%] object-contain z-10 transition-transform group-hover:scale-110" src={logoUrl} alt={service.name} loading="lazy" />
                     ) : (
                         <span className="text-6xl z-10">{logoEmoji}</span>
                     )}

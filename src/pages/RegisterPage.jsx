@@ -1,13 +1,15 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { Zap, Eye, EyeOff } from 'lucide-react'
+import { Zap, Eye, EyeOff, Check, Mail } from 'lucide-react'
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import { supabase } from '../lib/supabase'
 
 const RegisterPage = () => {
   const navigate = useNavigate()
   const [showPassword, setShowPassword] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
   const { register, handleSubmit, formState: { errors } } = useForm()
 
   const onSubmit = async (data) => {
@@ -25,8 +27,9 @@ const RegisterPage = () => {
 
       if (error) throw error
 
-      alert('Cuenta creada exitosamente. ¡Por favor verifica tu correo electrónico!')
-      navigate('/login')
+      if (error) throw error
+      
+      setShowSuccessModal(true)
     } catch (error) {
       console.error('Error signing up:', error.message)
       alert(error.message)
@@ -199,6 +202,42 @@ const RegisterPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Success Modal */}
+      <AnimatePresence>
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl p-8 shadow-2xl max-w-sm w-full text-center relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary-400 to-primary-600"></div>
+              
+              <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Mail className="w-10 h-10 text-green-500" />
+                <div className="absolute bg-white rounded-full p-1 -bottom-1 -right-1 shadow-sm border border-gray-100">
+                    <Check className="w-4 h-4 text-green-600" strokeWidth={3} />
+                </div>
+              </div>
+
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">¡Revisa tu correo!</h3>
+              <p className="text-gray-500 mb-8 leading-relaxed">
+                Hemos enviado un enlace de confirmación a tu email. <br/>
+                <span className="text-sm font-medium text-primary-600">Es necesario verificarlo para entrar.</span>
+              </p>
+
+              <button
+                onClick={() => navigate('/login')}
+                className="w-full bg-primary-500 hover:bg-primary-600 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-primary-500/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Entendido, ir al login
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   )
 }
