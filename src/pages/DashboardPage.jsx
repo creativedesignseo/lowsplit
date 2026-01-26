@@ -293,8 +293,8 @@ const DashboardPage = () => {
                                 className="bg-white p-4 sm:p-6 rounded-[20px] shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 group hover:border-[#EF534F]/30 transition-all cursor-pointer"
                             >
                                 <div className="flex items-center gap-4 w-full sm:w-auto">
-                                    <div className="w-14 h-14 bg-gray-50 rounded-xl p-2 flex items-center justify-center border border-gray-100">
-                                        <img src={getLogoUrl(sub.service)} alt={sub.name} className="w-full h-full object-contain" />
+                                    <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden relative">
+                                        <img src={getLogoUrl(sub.service)} alt={sub.name} className="w-full h-full object-cover" />
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-gray-900 text-lg group-hover:text-[#EF534F] transition-colors">{sub.name}</h3>
@@ -358,8 +358,8 @@ const DashboardPage = () => {
                            sales.map(group => (
                               <div key={group.id} className="bg-white p-4 sm:p-6 rounded-[20px] shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 group hover:border-[#EF534F]/30 transition-all">
                                   <div className="flex items-center gap-4 w-full sm:w-auto">
-                                      <div className="w-14 h-14 bg-gray-50 rounded-xl p-2 flex items-center justify-center border border-gray-100">
-                                          <img src={getLogoUrl(group.service)} alt={group.name} className="w-full h-full object-contain" />
+                                      <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden relative">
+                                          <img src={getLogoUrl(group.service)} alt={group.name} className="w-full h-full object-cover" />
                                       </div>
                                       <div>
                                           <h3 className="font-bold text-gray-900 text-lg">{group.name}</h3>

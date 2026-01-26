@@ -170,8 +170,8 @@ const ShareSubscriptionPage = () => {
                                 onClick={() => handleServiceSelect(service)}
                                 className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-[#EF534F] hover:bg-[#fff5f5] transition-all group text-left"
                             >
-                                <div className="w-12 h-12 bg-white rounded-lg shadow-sm flex items-center justify-center p-2 border border-gray-100">
-                                    <img src={getLogoUrl(service.slug)} alt={service.name} className="w-full h-full object-contain" />
+                                <div className="w-12 h-12 bg-white rounded-lg shadow-sm flex items-center justify-center border border-gray-100 overflow-hidden relative">
+                                    <img src={getLogoUrl(service.slug)} alt={service.name} className="w-full h-full object-cover" />
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-gray-900 group-hover:text-[#EF534F] transition-colors">{service.name}</h3>
@@ -193,8 +193,8 @@ const ShareSubscriptionPage = () => {
                 <div className="p-8">
                     <div className="flex items-center justify-between mb-8 pb-6 border-b border-gray-100">
                         <div className="flex items-center gap-4">
-                             <div className="w-16 h-16 bg-white rounded-xl shadow-sm flex items-center justify-center p-3 border border-gray-100">
-                                <img src={getLogoUrl(selectedService.slug)} alt={selectedService.name} className="w-full h-full object-contain" />
+                             <div className="w-16 h-16 bg-white rounded-xl shadow-sm flex items-center justify-center border border-gray-100 overflow-hidden relative">
+                                <img src={getLogoUrl(selectedService.slug)} alt={selectedService.name} className="w-full h-full object-cover" />
                              </div>
                              <div>
                                 <h2 className="text-xl font-bold text-gray-900">{selectedService.name}</h2>
