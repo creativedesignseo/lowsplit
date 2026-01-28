@@ -11,6 +11,7 @@ import RegisterPage from './pages/RegisterPage'
 import ServiceDetailPage from './pages/ServiceDetailPage'
 import GroupDetailPage from './pages/GroupDetailPage'
 import ShareSubscriptionPage from './pages/ShareSubscriptionPage'
+import WalletPage from './pages/WalletPage'
 import TestPage from './pages/TestPage'
 
 // Layout components
@@ -59,6 +60,7 @@ function App() {
           <Route path="/service/:id" element={<ServiceDetailPage />} />
           <Route path="/group/:id" element={<GroupDetailPage />} />
           <Route path="/share-subscription" element={<ShareSubscriptionPage />} />
+          <Route path="/wallet" element={<WalletPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/login" element={<LoginPage />} />

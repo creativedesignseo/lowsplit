@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Menu, X, Globe, Home, HeadphonesIcon, CreditCard, Search, User, Plus, LogOut, Settings, LayoutDashboard, HelpCircle, ChevronDown, Zap } from 'lucide-react'
+import { Menu, X, Globe, Home, HeadphonesIcon, CreditCard, Search, User, Plus, LogOut, Settings, LayoutDashboard, HelpCircle, ChevronDown, Zap, Wallet } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -8,12 +8,14 @@ const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const location = useLocation()
+  const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchUserAndProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
+        setUser(session.user)
         const { data } = await supabase
           .from('profiles')
           .select('avatar_url')
@@ -21,13 +23,22 @@ const Navbar = () => {
           .single()
         
         if (data) setProfile(data)
+      } else {
+        setUser(null)
+        setProfile(null)
       }
     }
     
-    fetchProfile()
+    fetchUserAndProfile()
+
+    // Listen for auth state changes
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      if (!session) setProfile(null)
+    })
 
     // Subscribe to realtime changes for instant updates
-    const subscription = supabase
+    const realtimeSubscription = supabase
       .channel('public:profiles')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, payload => {
         setProfile(payload.new)
@@ -35,7 +46,8 @@ const Navbar = () => {
       .subscribe()
 
     return () => {
-      supabase.removeChannel(subscription)
+      authSubscription.unsubscribe()
+      supabase.removeChannel(realtimeSubscription)
     }
   }, [])
 
@@ -112,96 +124,115 @@ const Navbar = () => {
               <span className="text-white text-xs font-bold">ES</span>
             </button>
             
-            {/* User Dropdown */}
-            <div className="relative">
-              <button 
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full bg-white/20 hover:bg-white/30 transition-all border-2 border-transparent hover:border-white/20"
-              >
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10">
-                   {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="User" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                       <User className="w-4 h-4 text-white" />
-                    </div>
-                  )}
-                </div>
-                <ChevronDown className={`w-3 h-3 text-white transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {isDropdownOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)}></div>
-                  <div className="absolute top-full right-0 mt-3 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
-                    
-                    {/* Header */}
-                    <div className="px-5 py-4 border-b border-gray-50">
-                        <p className="text-sm font-bold text-gray-900 truncate">
-                            {profile?.email || 'Usuario'}
-                        </p>
-                        <p className="text-xs text-gray-400">Información personal</p>
-                    </div>
-
-                    {/* Savings Banner */}
-                    <div className="px-4 py-2">
-                        <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-3 flex items-center justify-between text-white shadow-lg shadow-gray-200">
-                            <div>
-                                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Ahorro Total</p>
-                                <p className="text-lg font-black text-[#EF534F]">€0.00</p>
-                            </div>
-                            <Zap className="w-5 h-5 text-yellow-400" fill="currentColor" />
-                        </div>
-                    </div>
-                    
-                    {/* Menu Items */}
-                    <div className="py-2">
-                         <Link 
-                            to="/dashboard" 
-                            onClick={() => setIsDropdownOpen(false)}
-                            className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-gray-700 hover:text-gray-900"
-                        >
-                            <LayoutDashboard className="w-4 h-4" />
-                            <span className="text-sm font-medium">Mi Suscripción</span>
-                         </Link>
-
-                         <Link 
-                            to="/soporte" 
-                            onClick={() => setIsDropdownOpen(false)}
-                            className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-gray-700 hover:text-gray-900"
-                        >
-                            <HelpCircle className="w-4 h-4" />
-                            <span className="text-sm font-medium">Soporte</span>
-                         </Link>
-
-                         <Link 
-                            to="/profile" 
-                            onClick={() => setIsDropdownOpen(false)}
-                            className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-gray-700 hover:text-gray-900"
-                        >
-                            <Settings className="w-4 h-4" />
-                            <span className="text-sm font-medium">Configuración</span>
-                         </Link>
-                    </div>
-
-                    <div className="border-t border-gray-50 mt-1 py-1">
-                        <button 
-                            onClick={async () => {
-                                await supabase.auth.signOut()
-                                setIsDropdownOpen(false)
-                                navigate('/login')
-                            }}
-                            className="w-full flex items-center gap-3 px-5 py-3 hover:bg-red-50 transition-colors text-gray-500 hover:text-red-500"
-                        >
-                            <LogOut className="w-4 h-4" />
-                            <span className="text-sm font-medium">Cerrar sesión</span>
-                        </button>
-                    </div>
-
+            {/* User Dropdown / Login Button */}
+            {user ? (
+              <div className="relative">
+                <button 
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full bg-white/20 hover:bg-white/30 transition-all border-2 border-transparent hover:border-white/20"
+                >
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-white/10">
+                     {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt="User" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                         <User className="w-4 h-4 text-white" />
+                      </div>
+                    )}
                   </div>
-                </>
-              )}
-            </div>
+                  <ChevronDown className={`w-3 h-3 text-white transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)}></div>
+                    <div className="absolute top-full right-0 mt-3 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                      
+                      {/* Header */}
+                      <div className="px-5 py-4 border-b border-gray-50">
+                          <p className="text-sm font-bold text-gray-900 truncate">
+                              {user?.email || 'Usuario'}
+                          </p>
+                          <p className="text-xs text-gray-400">Información personal</p>
+                      </div>
+
+                      {/* Savings Banner */}
+                      <div className="px-4 py-2">
+                          <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-3 flex items-center justify-between text-white shadow-lg shadow-gray-200">
+                              <div>
+                                  <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Ahorro Total</p>
+                                  <p className="text-lg font-black text-[#EF534F]">€0.00</p>
+                              </div>
+                              <Zap className="w-5 h-5 text-yellow-400" fill="currentColor" />
+                          </div>
+                      </div>
+                      
+                      {/* Menu Items */}
+                      <div className="py-2">
+                           <Link 
+                              to="/dashboard" 
+                              onClick={() => setIsDropdownOpen(false)}
+                              className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-gray-700 hover:text-gray-900"
+                          >
+                              <LayoutDashboard className="w-4 h-4" />
+                              <span className="text-sm font-medium">Mi Suscripción</span>
+                           </Link>
+
+                           <Link 
+                              to="/wallet" 
+                              onClick={() => setIsDropdownOpen(false)}
+                              className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-gray-700 hover:text-gray-900"
+                          >
+                              <Wallet className="w-4 h-4" />
+                              <span className="text-sm font-medium">Mi Wallet</span>
+                           </Link>
+
+                           <Link 
+                              to="/soporte" 
+                              onClick={() => setIsDropdownOpen(false)}
+                              className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-gray-700 hover:text-gray-900"
+                          >
+                              <HelpCircle className="w-4 h-4" />
+                              <span className="text-sm font-medium">Soporte</span>
+                           </Link>
+
+                           <Link 
+                              to="/profile" 
+                              onClick={() => setIsDropdownOpen(false)}
+                              className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-gray-700 hover:text-gray-900"
+                          >
+                              <Settings className="w-4 h-4" />
+                              <span className="text-sm font-medium">Configuración</span>
+                           </Link>
+                      </div>
+
+                      <div className="border-t border-gray-50 mt-1 py-1">
+                          <button 
+                              onClick={async () => {
+                                  await supabase.auth.signOut()
+                                  setIsDropdownOpen(false)
+                                  navigate('/login')
+                              }}
+                              className="w-full flex items-center gap-3 px-5 py-3 hover:bg-red-50 transition-colors text-gray-500 hover:text-red-500"
+                          >
+                              <LogOut className="w-4 h-4" />
+                              <span className="text-sm font-medium">Cerrar sesión</span>
+                          </button>
+                      </div>
+
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <Link 
+                to="/login"
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-[#EF534F] font-bold text-sm hover:bg-white/90 transition-all shadow-sm"
+              >
+                <User className="w-4 h-4" />
+                <span>Acceder</span>
+              </Link>
+            )}
           </div>
 
           {/* Mobile menu button */}

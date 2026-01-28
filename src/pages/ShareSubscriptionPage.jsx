@@ -84,7 +84,9 @@ const ShareSubscriptionPage = () => {
           admin_id: session.user.id,
           status: 'available',
           title: `${selectedService.name} - Compartido`,
-          access_credentials: credentials,
+          // access_credentials: credentials, // REMOVED - using specific columns now
+          credentials_login: formData.email,
+          credentials_password: formData.password,
           slots_occupied: 1, // Admin takes 1 slot
           price_per_slot: parseFloat(formData.price),
           next_payment_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // +30 days
@@ -291,7 +293,7 @@ const ShareSubscriptionPage = () => {
                         Tu grupo de <b>{selectedService?.name}</b> está activo. Te notificaremos cuando alguien compre un perfil y recibirás el pago.
                     </p>
                     <button 
-                      onClick={() => navigate('/dashboard')}
+                      onClick={() => navigate('/dashboard?tab=sales')}
                       className="bg-gray-900 text-white px-8 py-3 rounded-full font-bold hover:opacity-90 transition-all"
                     >
                         Ir a mi Dashboard

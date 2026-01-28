@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
-import { Link, useNavigate } from 'react-router-dom'
-import { LogIn, Loader2, TrendingUp, Plus, ChevronRight, User, ShoppingBag, Zap } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { LogIn, Loader2, TrendingUp, Plus, ChevronRight, User, ShoppingBag, Zap, Clock, Search, CheckCircle, XCircle, AlertCircle, RotateCcw, Package, Filter, Shield } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { getLogoUrl } from '../lib/utils'
 
@@ -9,12 +9,16 @@ const DashboardPage = () => {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   
   // Dashboard State
-  const [activeTab, setActiveTab] = useState('purchases')
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'purchases')
   const [purchases, setPurchases] = useState([])
   const [sales, setSales] = useState([])
+  const [orders, setOrders] = useState([])
   const [loadingData, setLoadingData] = useState(false)
+  const [orderFilter, setOrderFilter] = useState('all')
+  const [searchOrderId, setSearchOrderId] = useState('')
 
   // Credentials Edit State
   const [editingCreds, setEditingCreds] = useState(null) // group ID
@@ -22,27 +26,53 @@ const DashboardPage = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [savingCreds, setSavingCreds] = useState(false)
 
+  // Track if data has been loaded to prevent duplicate fetches
+  const dataLoadedRef = useRef(false)
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    let isMounted = true
+    
+    const loadData = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!isMounted) return
+      
       setSession(session)
       setLoading(false)
-      if (session) {
+      
+      if (session && !dataLoadedRef.current) {
+        dataLoadedRef.current = true
         fetchDashboardData(session.user.id)
       }
-    })
+    }
+    
+    loadData()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      if (session) {
-        fetchDashboardData(session.user.id)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return
+      
+      // Only react to actual sign in/out events
+      if (event === 'SIGNED_IN') {
+        setSession(session)
+        if (!dataLoadedRef.current) {
+          dataLoadedRef.current = true
+          fetchDashboardData(session.user.id)
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null)
+        dataLoadedRef.current = false
       }
+      // Ignore TOKEN_REFRESHED, INITIAL_SESSION, etc.
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const fetchDashboardData = async (userId) => {
     setLoadingData(true)
+    console.log('Fetching dashboard data for user:', userId)
     try {
       // Fetch user's purchases (memberships where they are a member)
       const { data: membershipData, error: membershipError } = await supabase
@@ -71,6 +101,7 @@ const DashboardPage = () => {
         .eq('role', 'member')
 
       if (membershipError) console.error('Memberships error:', membershipError)
+      console.log('Memberships data:', membershipData)
       
       // Transform membership data to purchases format
       const purchasesData = (membershipData || []).map(m => ({
@@ -108,6 +139,7 @@ const DashboardPage = () => {
         .eq('admin_id', userId)
 
       if (groupsError) console.error('Groups error:', groupsError)
+      console.log('Groups data (sales):', groupsData)
 
       // Transform groups data to sales format
       const salesData = (groupsData || []).map(g => ({
@@ -123,6 +155,31 @@ const DashboardPage = () => {
         password: g.credentials_password
       }))
       setSales(salesData)
+
+      // Fetch order history (payment transactions)
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('payment_transactions')
+        .select(`
+          id,
+          amount,
+          currency,
+          status,
+          stripe_payment_intent_id,
+          created_at,
+          memberships (
+            subscription_groups (
+              services (
+                name,
+                slug
+              )
+            )
+          )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (ordersError) console.error('Orders error:', ordersError)
+      setOrders(ordersData || [])
 
     } catch (err) {
       console.error('Dashboard fetch error:', err)
@@ -246,7 +303,9 @@ const DashboardPage = () => {
                      <span className="text-xs text-gray-500">Mensual</span>
                  </div>
              </div>
-          </div>
+             
+
+           </div>
 
           {/* Tabs Navigation */}
           <div className="flex items-center gap-6 mb-8 border-b border-gray-200">
@@ -268,6 +327,16 @@ const DashboardPage = () => {
                   <TrendingUp className="w-4 h-4" />
                   Mis Grupos (Ventas)
                   {activeTab === 'sales' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#EF534F] rounded-t-full"></div>}
+              </button>
+
+              <button 
+                  onClick={() => setActiveTab('orders')}
+                  className={`pb-4 text-sm font-bold flex items-center gap-2 transition-all relative
+                  ${activeTab === 'orders' ? 'text-[#EF534F]' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                  <Clock className="w-4 h-4" />
+                  Historial de Pedidos
+                  {activeTab === 'orders' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#EF534F] rounded-t-full"></div>}
               </button>
           </div>
 
@@ -411,6 +480,138 @@ const DashboardPage = () => {
                               <span className="font-bold text-sm">Crear nuevo grupo</span>
                           </div>
                       </Link>
+                    </>
+                )}
+
+                {/* ORDER HISTORY LIST */}
+                {activeTab === 'orders' && (
+                    <>
+                      {/* Search & Filters Header */}
+                      <div className="mb-6">
+                        <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                          {/* Search Bar */}
+                          <div className="relative flex-1">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                              type="text"
+                              placeholder="Buscar ID de pedido..."
+                              value={searchOrderId}
+                              onChange={(e) => setSearchOrderId(e.target.value)}
+                              className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#EF534F] focus:ring-2 focus:ring-red-50 transition-all"
+                            />
+                          </div>
+                          {/* Filter Button */}
+                          <button className="flex items-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:border-gray-300 transition-all">
+                            <Filter className="w-4 h-4" />
+                            Filtros
+                          </button>
+                        </div>
+
+                        {/* Status Filter Pills */}
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { id: 'all', label: 'Todos', icon: Package },
+                            { id: 'pending', label: 'Procesando', icon: Clock, color: 'yellow' },
+                            { id: 'completed', label: 'Terminado', icon: CheckCircle, color: 'green' },
+                            { id: 'failed', label: 'Pendiente de resolución', icon: AlertCircle, color: 'red' },
+                            { id: 'refunded', label: 'Reintegrado', icon: RotateCcw, color: 'blue' },
+                          ].map((filter) => {
+                            const count = filter.id === 'all' 
+                              ? orders.length 
+                              : orders.filter(o => o.status === filter.id).length
+                            const Icon = filter.icon
+                            const isActive = orderFilter === filter.id
+                            
+                            return (
+                              <button
+                                key={filter.id}
+                                onClick={() => setOrderFilter(filter.id)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all border
+                                  ${isActive 
+                                    ? 'bg-gray-900 text-white border-gray-900' 
+                                    : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+                                  }`}
+                              >
+                                <Icon className="w-3.5 h-3.5" />
+                                {filter.label}
+                                <span className={`text-xs px-1.5 py-0.5 rounded-md ${isActive ? 'bg-white/20' : 'bg-gray-100'}`}>
+                                  {count}
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Orders List */}
+                      {(() => {
+                        const filteredOrders = orders.filter(order => {
+                          const matchesFilter = orderFilter === 'all' || order.status === orderFilter
+                          const matchesSearch = searchOrderId === '' || order.id.toLowerCase().includes(searchOrderId.toLowerCase())
+                          return matchesFilter && matchesSearch
+                        })
+
+                        if (filteredOrders.length === 0) {
+                          return (
+                            <div className="text-center py-16 bg-white rounded-[20px] border border-gray-100">
+                              <div className="w-24 h-24 mx-auto mb-6 bg-gray-50 rounded-2xl flex items-center justify-center">
+                                <Package className="w-12 h-12 text-gray-300" />
+                              </div>
+                              <p className="text-gray-900 font-bold text-lg mb-2">No se encontraron pedidos relevantes</p>
+                              <p className="text-gray-400 text-sm mb-6">Puedes ir y ver lo que quieres comprar.</p>
+                              <Link 
+                                to="/explore"
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-[#EF534F] text-white font-bold rounded-xl hover:shadow-lg hover:shadow-red-200 transition-all"
+                              >
+                                Ir a comprar
+                              </Link>
+                            </div>
+                          )
+                        }
+
+                        return filteredOrders.map(order => {
+                          const serviceName = order.memberships?.subscription_groups?.services?.name || 'Servicio'
+                          const serviceSlug = order.memberships?.subscription_groups?.services?.slug || 'unknown'
+                          
+                          const statusConfig = {
+                            pending: { label: 'Procesando', bg: 'bg-yellow-100', text: 'text-yellow-700', icon: Clock },
+                            completed: { label: 'Completado', bg: 'bg-green-100', text: 'text-green-700', icon: CheckCircle },
+                            failed: { label: 'Fallido', bg: 'bg-red-100', text: 'text-red-700', icon: XCircle },
+                            refunded: { label: 'Reintegrado', bg: 'bg-blue-100', text: 'text-blue-700', icon: RotateCcw },
+                          }
+                          const status = statusConfig[order.status] || statusConfig.pending
+                          const StatusIcon = status.icon
+
+                          return (
+                            <div 
+                              key={order.id}
+                              className="bg-white p-4 sm:p-6 rounded-[20px] shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden">
+                                  <img src={getLogoUrl(serviceSlug)} alt={serviceName} className="w-full h-full object-cover" />
+                                </div>
+                                <div>
+                                  <h3 className="font-bold text-gray-900">{serviceName}</h3>
+                                  <p className="text-xs text-gray-400 font-mono">#{order.id.slice(0, 8)}...</p>
+                                  <p className="text-xs text-gray-500">{new Date(order.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-6">
+                                <div className="text-right">
+                                  <p className="font-black text-gray-900 text-xl">€{order.amount?.toFixed(2) || '0.00'}</p>
+                                  <p className="text-xs text-gray-400">{order.currency || 'EUR'}</p>
+                                </div>
+                                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${status.bg} ${status.text}`}>
+                                  <StatusIcon className="w-3.5 h-3.5" />
+                                  <span className="text-xs font-bold">{status.label}</span>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })
+                      })()}
                     </>
                 )}
 
