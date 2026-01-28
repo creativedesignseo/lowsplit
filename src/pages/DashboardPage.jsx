@@ -137,7 +137,7 @@ const DashboardPage = () => {
           )
         `)
         .eq('admin_id', userId)
-
+      
       if (groupsError) console.error('Groups error:', groupsError)
       console.log('Groups data (sales):', groupsData)
 
@@ -156,6 +156,7 @@ const DashboardPage = () => {
       }))
       setSales(salesData)
 
+      /*
       // Fetch order history (payment transactions)
       const { data: ordersData, error: ordersError } = await supabase
         .from('payment_transactions')
@@ -179,6 +180,8 @@ const DashboardPage = () => {
         .order('created_at', { ascending: false })
 
       if (ordersError) console.error('Orders error:', ordersError)
+      */
+      const ordersData = []
       setOrders(ordersData || [])
 
     } catch (err) {
@@ -717,3 +720,5 @@ const DashboardPage = () => {
 }
 
 export default DashboardPage
+
+
