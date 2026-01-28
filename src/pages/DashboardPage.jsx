@@ -156,7 +156,6 @@ const DashboardPage = () => {
       }))
       setSales(salesData)
 
-      /*
       // Fetch order history (payment transactions)
       const { data: ordersData, error: ordersError } = await supabase
         .from('payment_transactions')
@@ -180,8 +179,6 @@ const DashboardPage = () => {
         .order('created_at', { ascending: false })
 
       if (ordersError) console.error('Orders error:', ordersError)
-      */
-      const ordersData = []
       setOrders(ordersData || [])
 
     } catch (err) {
