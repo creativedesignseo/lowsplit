@@ -468,35 +468,35 @@ const GroupDetailPage = () => {
                     </div>
                 </div>
 
-                {/* Interaction/Chat Area (Right 9 cols) */}
+            {/* Interaction/Chat Area (Right 9 cols) */}
                 <div className="lg:col-span-9">
-                     <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 flex flex-col min-h-[500px] relative overflow-hidden">
+                     <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 flex flex-col min-h-[400px] lg:min-h-[500px] relative overflow-hidden">
                          
                          {/* Chat Empty State (Reference style) */}
-                         <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-                            <div className="w-40 h-40 bg-gray-50 rounded-full flex items-center justify-center mb-8 relative">
-                                <MessageSquareText className="w-16 h-16 text-gray-200" />
-                                <div className="absolute -top-2 -right-2 w-10 h-10 bg-[#EF534F]/10 rounded-full flex items-center justify-center">
-                                    <Smile className="w-5 h-5 text-[#EF534F]" />
+                         <div className="flex-1 flex flex-col items-center justify-center p-8 lg:p-12 text-center">
+                            <div className="w-32 h-32 lg:w-40 lg:h-40 bg-gray-50 rounded-full flex items-center justify-center mb-6 lg:mb-8 relative">
+                                <MessageSquareText className="w-12 h-12 lg:w-16 lg:h-16 text-gray-200" />
+                                <div className="absolute -top-2 -right-2 w-8 h-8 lg:w-10 lg:h-10 bg-[#EF534F]/10 rounded-full flex items-center justify-center">
+                                    <Smile className="w-4 h-4 lg:w-5 lg:h-5 text-[#EF534F]" />
                                 </div>
                             </div>
-                            <h3 className="text-2xl font-black text-gray-900 mb-2">Muro del Grupo</h3>
+                            <h3 className="text-xl lg:text-2xl font-black text-gray-900 mb-2">Muro del Grupo</h3>
                             <p className="text-gray-500 max-w-[340px] text-sm leading-relaxed">
                                 Este es vuestro espacio privado para comentar fallos, renovaciones o simplemente saludar.
                             </p>
                          </div>
 
                          {/* Chat Footer */}
-                         <div className="p-6 bg-gray-50/50 border-t border-gray-100">
-                             <div className="flex items-center gap-4 bg-white border border-gray-200 rounded-[20px] p-2 pl-5 focus-within:border-indigo-300 focus-within:ring-8 focus-within:ring-indigo-50 transition-all shadow-sm">
-                                 <Smile className="w-6 h-6 text-gray-300 hover:text-gray-500 cursor-pointer" />
+                         <div className="p-4 lg:p-6 bg-gray-50/50 border-t border-gray-100">
+                             <div className="flex items-center gap-4 bg-white border border-gray-200 rounded-[20px] p-2 pl-4 lg:pl-5 focus-within:border-indigo-300 focus-within:ring-8 focus-within:ring-indigo-50 transition-all shadow-sm">
+                                 <Smile className="w-6 h-6 text-gray-300 hover:text-gray-500 cursor-pointer hidden sm:block" />
                                  <input 
                                     type="text" 
-                                    placeholder="Escribe un mensaje para el grupo..."
-                                    className="flex-1 bg-transparent border-none focus:ring-0 text-gray-800 placeholder:text-gray-300 font-medium py-3"
+                                    placeholder="Escribe un mensaje..."
+                                    className="flex-1 bg-transparent border-none focus:ring-0 text-gray-800 placeholder:text-gray-300 font-medium py-3 text-sm lg:text-base"
                                  />
-                                 <button className="bg-[#1a1a1a] text-white p-3.5 rounded-2xl hover:bg-black transition-all transform active:scale-90 flex items-center justify-center">
-                                    <Send className="w-5 h-5" />
+                                 <button className="bg-[#1a1a1a] text-white p-3 lg:p-3.5 rounded-2xl hover:bg-black transition-all transform active:scale-90 flex items-center justify-center">
+                                    <Send className="w-4 h-4 lg:w-5 lg:h-5" />
                                  </button>
                              </div>
                          </div>
@@ -510,7 +510,7 @@ const GroupDetailPage = () => {
       {/* Payment Method Modal */}
       {showPaymentModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white">
               <div className="flex justify-between items-start">
