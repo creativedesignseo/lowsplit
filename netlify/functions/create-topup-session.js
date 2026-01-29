@@ -1,8 +1,8 @@
-import Stripe from 'stripe';
+const Stripe = require('stripe');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-export async function handler(event) {
+exports.handler = async function(event) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -55,8 +55,8 @@ export async function handler(event) {
         }
       ],
       mode: 'payment',
-      success_url: `${event.headers.origin || event.headers.referer?.split('/').slice(0, 3).join('/')}/dashboard?tab=wallet&payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${event.headers.origin || event.headers.referer?.split('/').slice(0, 3).join('/')}/dashboard?tab=wallet&payment=cancelled`,
+      success_url: `${event.headers.origin || event.headers.referer?.split('/').slice(0, 3).join('/')}/dashboard?tab=wallet&success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${event.headers.origin || event.headers.referer?.split('/').slice(0, 3).join('/')}/dashboard?tab=wallet&success=false`,
       metadata: {
         userId: userId,
         type: 'top_up',
@@ -78,4 +78,4 @@ export async function handler(event) {
       body: JSON.stringify({ error: error.message })
     };
   }
-}
+};

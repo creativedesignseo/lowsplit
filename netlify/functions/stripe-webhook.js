@@ -1,5 +1,5 @@
-import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
+const Stripe = require('stripe');
+const { createClient } = require('@supabase/supabase-js');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -8,7 +8,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-export async function handler(event) {
+exports.handler = async function(event) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Content-Type': 'application/json'
@@ -58,7 +58,7 @@ export async function handler(event) {
       }
 
       // 2. Extract Metadata & Auto-Assign Logic
-      const groupId = session.metadata?.groupId;
+      let groupId = session.metadata?.groupId;
       const type = session.metadata?.type || 'subscription';
       const months = parseInt(session.metadata?.months || '1');
       const serviceName = session.metadata?.serviceName || 'Unknown';
@@ -190,4 +190,4 @@ export async function handler(event) {
     headers,
     body: JSON.stringify({ received: true })
   };
-}
+};
