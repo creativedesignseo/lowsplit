@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link, useNavigate } from 'react-router-dom'
-import { Wallet, ArrowUpRight, ArrowDownLeft, Clock, ChevronLeft, ChevronRight, Loader2, TrendingUp, CreditCard, PlusCircle, AlertCircle } from 'lucide-react'
+import { Wallet, ArrowUpRight, ArrowDownLeft, Clock, ChevronLeft, ChevronRight, Loader2, TrendingUp, CreditCard, PlusCircle, AlertCircle, X } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useWallet } from '../hooks/useWallet'
 
