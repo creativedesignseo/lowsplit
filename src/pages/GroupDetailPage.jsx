@@ -1,14 +1,25 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { Check, ChevronLeft, ShieldCheck, Star, Clock, Calendar, UserCheck, Shield, MessageCircle, Users, MessageSquareText, Smile, Send, User, Plus } from 'lucide-react'
+import { Check, ChevronLeft, ShieldCheck, Star, Clock, Calendar, UserCheck, Shield, MessageCircle, Users, MessageSquareText, Smile, Send, User, Plus, Loader2 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { getLogoUrl, getEmojiForSlug } from '../lib/utils'
+import { useWallet } from '../hooks/useWallet'
 
 const GroupDetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [joining, setJoining] = useState(false)
+  const [session, setSession] = useState(null)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
+  }, [])
+
+  const { balance, isLoading: isLoadingWallet } = useWallet(session?.user?.id)
 
   // Fetch Group Data + Admin Profile + Service Info
   const { data: group, isLoading, error } = useQuery({
@@ -89,6 +100,42 @@ const GroupDetailPage = () => {
   // Calculate pricing (mock logic or from DB)
   const price = group.price_per_slot || 0
   const total = price + 0.35 // Service fee example
+
+  const handleJoinGroup = async () => {
+    if (!session) {
+        navigate('/login', { state: { from: `/group/${id}` } })
+        return
+    }
+
+    if (balance < total) {
+        alert(`Saldo insuficiente. Tu saldo es €${balance.toFixed(2)} y el total es €${total.toFixed(2)}. Por favor, recarga tu billetera.`)
+        return
+    }
+
+    const confirmJoin = window.confirm(`¿Seguro que quieres unirte a este grupo por €${total.toFixed(2)}? El monto se descontará de tu billetera LowSplit.`)
+    
+    if (!confirmJoin) return
+
+    setJoining(true)
+    try {
+        const { error: rpcError } = await supabase.rpc('handle_join_group_wallet', {
+            p_user_id: session.user.id,
+            p_group_id: id,
+            p_amount: total,
+            p_description: `Acceso a ${service.name}`
+        })
+
+        if (rpcError) throw rpcError
+
+        alert('¡Te has unido al grupo con éxito!')
+        navigate('/dashboard?tab=purchases')
+    } catch (err) {
+        console.error('Error joining group:', err)
+        alert('Error al unirse al grupo: ' + err.message)
+    } finally {
+        setJoining(false)
+    }
+  }
 
   return (
     <>
@@ -249,9 +296,19 @@ const GroupDetailPage = () => {
                                 <p className="text-xs text-gray-400 mt-1">* Incluye protección al comprador</p>
                             </div>
 
-                            <button className="w-full sm:w-auto px-8 py-4 bg-[#EF534F] hover:bg-[#e0403c] text-white font-bold rounded-xl shadow-lg shadow-red-200 transition-all transform active:scale-95 flex items-center justify-center gap-2">
-                                <UserCheck className="w-5 h-5" />
-                                Unirme al Grupo
+                             <button 
+                                onClick={handleJoinGroup}
+                                disabled={joining || availableSlots === 0}
+                                className="w-full sm:w-auto px-8 py-4 bg-[#EF534F] hover:bg-[#e0403c] text-white font-bold rounded-xl shadow-lg shadow-red-200 transition-all transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                {joining ? (
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <>
+                                        <UserCheck className="w-5 h-5" />
+                                        Unirme al Grupo
+                                    </>
+                                )}
                             </button>
                         </div>
                          

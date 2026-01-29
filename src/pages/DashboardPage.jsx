@@ -4,6 +4,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { LogIn, Loader2, TrendingUp, Plus, ChevronRight, User, ShoppingBag, Zap, Clock, Search, CheckCircle, XCircle, AlertCircle, RotateCcw, Package, Filter, Shield } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { getLogoUrl } from '../lib/utils'
+import { useWallet } from '../hooks/useWallet'
+import { Wallet, ArrowDownCircle, ArrowUpCircle, History } from 'lucide-react'
 
 const DashboardPage = () => {
   const [session, setSession] = useState(null)
@@ -19,12 +21,20 @@ const DashboardPage = () => {
   const [loadingData, setLoadingData] = useState(false)
   const [orderFilter, setOrderFilter] = useState('all')
   const [searchOrderId, setSearchOrderId] = useState('')
+  
+  // Wallet Logic
+  const { balance, transactions, isLoading: loadingWallet } = useWallet(session?.user?.id)
 
   // Credentials Edit State
   const [editingCreds, setEditingCreds] = useState(null) // group ID
   const [credsForm, setCredsForm] = useState({ login: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [savingCreds, setSavingCreds] = useState(false)
+  
+  // Recharge State
+  const [showRechargeModal, setShowRechargeModal] = useState(false)
+  const [rechargeAmount, setRechargeAmount] = useState(10)
+  const [recharging, setRecharging] = useState(false)
 
   // Track if data has been loaded to prevent duplicate fetches
   const dataLoadedRef = useRef(false)
@@ -228,6 +238,42 @@ const DashboardPage = () => {
       }
   }
 
+  const handleTopup = async () => {
+    setRecharging(true)
+    try {
+      const response = await fetch('/.netlify/functions/create-topup-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: rechargeAmount,
+          userId: session.user.id,
+          userEmail: session.user.email
+        })
+      })
+
+      if (!response.ok) {
+        const text = await response.text()
+        console.error('Server error response:', text)
+        if (window.location.port !== '8888') {
+          throw new Error(`Estás en el puerto ${window.location.port}. Para que las funciones funcionen localmente debes usar el puerto 8888 (http://localhost:8888)`)
+        }
+        throw new Error(`Error del servidor (${response.status}). Revisa que 'netlify dev' esté funcionando correctamente.`)
+      }
+
+      const data = await response.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error(data.error || 'Error al crear sesión de pago')
+      }
+    } catch (error) {
+      console.error('Recharge error:', error)
+      alert('Error al iniciar la recarga: ' + error.message)
+    } finally {
+      setRecharging(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen pt-24 pb-20 flex justify-center items-center bg-[#FAFAFA]">
@@ -272,7 +318,29 @@ const DashboardPage = () => {
           <div className="mb-8">
              <h1 className="text-3xl font-black text-gray-900 mb-6">Hola, {session.user.email?.split('@')[0]}</h1>
              
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                 {/* Balance Card (NEW) */}
+                 <div className="bg-white rounded-[20px] p-6 border border-gray-100 shadow-sm overflow-hidden relative group">
+                     <div className="flex items-center gap-3 mb-4 text-gray-500">
+                         <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+                            <Wallet className="w-4 h-4 text-[#EF534F]" />
+                         </div>
+                         <span className="text-sm font-bold uppercase tracking-wider">Mi Billetera</span>
+                     </div>
+                     <div className="text-3xl font-black text-gray-900 mb-1">
+                        {loadingWallet ? <Loader2 className="w-6 h-6 animate-spin" /> : `€${(balance || 0).toFixed(2)}`}
+                     </div>
+                     <span className="text-xs text-gray-500">Saldo disponible</span>
+                     
+                     {/* Add funds small button */}
+                     <button 
+                        onClick={() => setShowRechargeModal(true)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#EF534F] text-white flex items-center justify-center shadow-lg shadow-red-100 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0"
+                     >
+                        <Plus className="w-4 h-4" />
+                     </button>
+                 </div>
+
                  {/* Savings Card */}
                  <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-[20px] p-6 text-white shadow-xl shadow-gray-200">
                      <div className="flex items-center gap-3 mb-4 opacity-80">
@@ -337,6 +405,16 @@ const DashboardPage = () => {
                   <Clock className="w-4 h-4" />
                   Historial de Pedidos
                   {activeTab === 'orders' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#EF534F] rounded-t-full"></div>}
+              </button>
+
+              <button 
+                  onClick={() => setActiveTab('wallet')}
+                  className={`pb-4 text-sm font-bold flex items-center gap-2 transition-all relative
+                  ${activeTab === 'wallet' ? 'text-[#EF534F]' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                  <Wallet className="w-4 h-4" />
+                  Billetera
+                  {activeTab === 'wallet' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#EF534F] rounded-t-full"></div>}
               </button>
           </div>
 
@@ -615,6 +693,79 @@ const DashboardPage = () => {
                     </>
                 )}
 
+                {/* WALLET TAB */}
+                {activeTab === 'wallet' && (
+                    <div className="space-y-6">
+                        {/* Header Stats for Wallet */}
+                        <div className="bg-gradient-to-br from-[#EF534F] to-[#D32F2F] rounded-[30px] p-8 text-white shadow-xl shadow-red-100 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative">
+                             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+                             <div className="relative z-10">
+                                 <p className="text-white/80 font-bold uppercase tracking-widest text-xs mb-2">Saldo Principal</p>
+                                 <h2 className="text-5xl font-black mb-1">€{(balance || 0).toFixed(2)}</h2>
+                                 <p className="text-white/60 text-sm">Disponible para nuevas suscripciones</p>
+                             </div>
+                             
+                             <div className="flex gap-4 relative z-10">
+                                 <button 
+                                    onClick={() => setShowRechargeModal(true)}
+                                    className="px-8 py-4 bg-white text-[#EF534F] font-black rounded-2xl hover:shadow-xl hover:scale-105 transition-all flex items-center gap-2"
+                                 >
+                                     <Plus className="w-5 h-5" />
+                                     Recargar
+                                 </button>
+                                 <button className="px-8 py-4 bg-black/20 text-white font-black rounded-2xl border border-white/20 hover:bg-black/30 transition-all">
+                                     Retirar
+                                 </button>
+                             </div>
+                        </div>
+
+                        {/* Recent Transactions */}
+                        <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden">
+                            <div className="p-6 border-b border-gray-50 flex items-center justify-between">
+                                <h3 className="font-black text-gray-900 flex items-center gap-2">
+                                    <History className="w-5 h-5 text-gray-400" />
+                                    Últimos Movimientos
+                                </h3>
+                            </div>
+                            
+                            <div className="divide-y divide-gray-50">
+                                {loadingWallet ? (
+                                    <div className="py-12 flex justify-center">
+                                        <Loader2 className="w-6 h-6 animate-spin text-[#EF534F]" />
+                                    </div>
+                                ) : (transactions?.length > 0) ? (
+                                    transactions.map(tx => {
+                                        const isCredit = tx.type === 'deposit' || tx.type === 'refund'
+                                        return (
+                                            <div key={tx.id} className="p-4 sm:p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${isCredit ? 'bg-green-50 text-green-600' : 'bg-red-50 text-[#EF534F]'}`}>
+                                                        {isCredit ? <ArrowDownCircle className="w-6 h-6" /> : <ArrowUpCircle className="w-6 h-6" />}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-gray-900">{tx.description || 'Transacción'}</p>
+                                                        <p className="text-xs text-gray-400">{new Date(tx.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className={`font-black text-lg ${isCredit ? 'text-green-600' : 'text-gray-900'}`}>
+                                                        {isCredit ? '+' : '-'}€{Number(tx.amount).toFixed(2)}
+                                                    </p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{tx.status}</p>
+                                                </div>
+                                            </div>
+                                        )
+                                    })
+                                ) : (
+                                    <div className="py-12 text-center">
+                                        <p className="text-gray-400 text-sm">Aún no tienes movimientos registrados.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
             </div>
           )}
         </div>
@@ -708,6 +859,68 @@ const DashboardPage = () => {
                             </p>
                         </div>
                     )}
+                 </div>
+            </div>
+        )}
+
+        {/* Recharge Balance Modal */}
+        {showRechargeModal && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="bg-white rounded-[24px] w-full max-w-md p-8 shadow-2xl animate-in fade-in zoom-in duration-200 border border-gray-100">
+                    <div className="flex items-center gap-3 mb-8">
+                        <div className="w-12 h-12 rounded-2xl bg-red-50 text-[#EF534F] flex items-center justify-center">
+                            <Wallet className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black text-gray-900">Recargar Billetera</h3>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Saldo Inmediato</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">Selecciona monto</label>
+                            <div className="grid grid-cols-3 gap-3">
+                                {[10, 20, 50].map(amount => (
+                                    <button 
+                                        key={amount}
+                                        onClick={() => setRechargeAmount(amount)}
+                                        className={`py-4 rounded-2xl font-black text-lg border transition-all ${rechargeAmount === amount ? 'bg-[#EF534F] text-white border-[#EF534F] shadow-lg shadow-red-100' : 'bg-white text-gray-600 border-gray-100 hover:border-gray-300'}`}
+                                    >
+                                        €{amount}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="group">
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1 ml-1">Otro monto (€)</label>
+                            <input 
+                                type="number" 
+                                min="5"
+                                value={rechargeAmount}
+                                onChange={(e) => setRechargeAmount(Number(e.target.value))}
+                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-xl font-black focus:outline-none focus:border-[#EF534F] focus:ring-4 focus:ring-red-50 transition-all"
+                            />
+                            <p className="text-[10px] text-gray-400 mt-2 font-medium">Mínimo de recarga: €5.00</p>
+                        </div>
+
+                        <div className="pt-4 flex gap-3">
+                            <button 
+                                onClick={() => setShowRechargeModal(false)}
+                                className="flex-1 py-4 bg-gray-50 text-gray-500 font-bold rounded-2xl hover:bg-gray-100 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleTopup}
+                                disabled={recharging || rechargeAmount < 5}
+                                className="flex-1 py-4 bg-gray-900 text-white font-black rounded-2xl hover:bg-black transition-all shadow-xl shadow-gray-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {recharging ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Continuar <Plus className="w-4 h-4" /></>}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         )}

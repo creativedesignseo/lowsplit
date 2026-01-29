@@ -58,11 +58,33 @@ export async function handler(event) {
       }
 
       // 2. Extract Metadata & Auto-Assign Logic
-      let groupId = session.metadata?.groupId;
+      const groupId = session.metadata?.groupId;
+      const type = session.metadata?.type || 'subscription';
       const months = parseInt(session.metadata?.months || '1');
       const serviceName = session.metadata?.serviceName || 'Unknown';
       const amountPaid = session.amount_total / 100;
+      const stripeId = session.payment_intent || session.id;
 
+      // --- FLOW A: Wallet Top-Up ---
+      if (type === 'top_up') {
+        const userIdFromMetadata = session.metadata?.userId;
+        console.log('Processing Top-up for user:', userIdFromMetadata);
+        
+        if (userIdFromMetadata) {
+          const { error: rpcError } = await supabase.rpc('handle_wallet_topup', {
+            p_user_id: userIdFromMetadata,
+            p_amount: amountPaid,
+            p_stripe_id: stripeId,
+            p_description: `Recarga de saldo vía Stripe`
+          });
+          
+          if (rpcError) throw rpcError;
+          console.log('Top-up successful for user:', userIdFromMetadata);
+          return { statusCode: 200, headers, body: JSON.stringify({ received: true }) };
+        }
+      }
+
+      // --- FLOW B: Standard Subscription (Existing Logic) ---
       if (!groupId && serviceName && userId) {
         console.log('No group provided in metadata. Auto-assigning...');
         
