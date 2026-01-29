@@ -97,9 +97,69 @@ exports.handler = async function(event) {
             throw rpcError;
           }
           console.log('Top-up successful for user:', userIdFromMetadata);
+          
+          // Create in-app notification for the user
+          await supabase.from('notifications').insert({
+            user_id: userIdFromMetadata,
+            title: '¡Recarga exitosa!',
+            message: `Tu billetera ha sido recargada con €${amountPaid.toFixed(2)}.`,
+            type: 'success'
+          });
+          console.log('Notification created for top-up');
+          
           return { statusCode: 200, headers, body: JSON.stringify({ received: true }) };
         } else {
           console.log('ERROR: No userId in metadata!');
+        }
+      }
+
+      // --- FLOW A2: Group Join via Card Payment ---
+      if (type === 'group_join') {
+        console.log('=== PROCESSING GROUP JOIN VIA CARD ===');
+        const userIdFromMeta = session.metadata?.userId;
+        const groupIdFromMeta = session.metadata?.groupId;
+        const walletDeducted = parseFloat(session.metadata?.walletDeducted || '0');
+
+        if (userIdFromMeta && groupIdFromMeta) {
+          console.log('User:', userIdFromMeta, 'joining group:', groupIdFromMeta);
+          console.log('Card amount:', amountPaid, ', Wallet deducted:', walletDeducted);
+
+          // Join the user to the group
+          const { error: rpcError } = await supabase.rpc('handle_join_group_card', {
+            p_user_id: userIdFromMeta,
+            p_group_id: groupIdFromMeta,
+            p_card_amount: amountPaid,
+            p_wallet_amount: walletDeducted,
+            p_stripe_id: stripeId
+          });
+
+          if (rpcError) {
+            console.error('Error in handle_join_group_card RPC:', rpcError);
+            throw rpcError;
+          }
+
+          console.log('Group join successful for user:', userIdFromMeta);
+
+          // Get service name for notification
+          const { data: groupData } = await supabase
+            .from('subscription_groups')
+            .select('services(name)')
+            .eq('id', groupIdFromMeta)
+            .single();
+
+          const svcName = groupData?.services?.name || 'el servicio';
+
+          // Create notification
+          await supabase.from('notifications').insert({
+            user_id: userIdFromMeta,
+            title: '¡Bienvenido al grupo!',
+            message: `Te has unido exitosamente a ${svcName}. Ya puedes ver tus credenciales en el dashboard.`,
+            type: 'success'
+          });
+
+          return { statusCode: 200, headers, body: JSON.stringify({ received: true }) };
+        } else {
+          console.log('ERROR: Missing userId or groupId in group_join metadata!');
         }
       }
 

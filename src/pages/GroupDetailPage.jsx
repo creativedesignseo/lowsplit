@@ -1,17 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { Check, ChevronLeft, ShieldCheck, Star, Clock, Calendar, UserCheck, Shield, MessageCircle, Users, MessageSquareText, Smile, Send, User, Plus, Loader2 } from 'lucide-react'
+import { Check, ChevronLeft, ShieldCheck, Star, Clock, Calendar, UserCheck, Shield, MessageCircle, Users, MessageSquareText, Smile, Send, User, Plus, Loader2, Wallet, CreditCard, X } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { getLogoUrl, getEmojiForSlug } from '../lib/utils'
 import { useWallet } from '../hooks/useWallet'
+import { loadStripe } from '@stripe/stripe-js'
+
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
 
 const GroupDetailPage = () => {
   const { id } = useParams()
   const navigate = useNavigate()
   const [joining, setJoining] = useState(false)
   const [session, setSession] = useState(null)
+  const [showPaymentModal, setShowPaymentModal] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -101,47 +105,126 @@ const GroupDetailPage = () => {
   const price = group.price_per_slot || 0
   const total = price + 0.35 // Service fee example
 
-  const handleJoinGroup = async () => {
+  // Payment button handler - shows modal if user has balance, otherwise direct to Stripe
+  const handlePaymentClick = () => {
     if (!session) {
-        navigate('/login', { state: { from: `/group/${id}` } })
-        return
+      navigate('/login', { state: { from: `/group/${id}` } })
+      return
     }
+    setShowPaymentModal(true)
+  }
 
+  // Pay with wallet only (full amount)
+  const handlePayWithWallet = async () => {
     if (balance < total) {
-        alert(`Saldo insuficiente. Tu saldo es €${balance.toFixed(2)} y el total es €${total.toFixed(2)}. Por favor, recarga tu billetera.`)
-        return
+      alert(`Saldo insuficiente. Tu saldo es €${balance.toFixed(2)} y el total es €${total.toFixed(2)}.`)
+      return
     }
-
-    const confirmJoin = window.confirm(`¿Seguro que quieres unirte a este grupo por €${total.toFixed(2)}? El monto se descontará de tu billetera LowSplit.`)
-    
-    if (!confirmJoin) return
 
     setJoining(true)
+    setShowPaymentModal(false)
+    
     try {
-        const { error: rpcError } = await supabase.rpc('handle_join_group_wallet', {
-            p_user_id: session.user.id,
-            p_group_id: id,
-            p_amount: total,
-            p_description: `Acceso a ${service.name}`
-        })
+      const { error: rpcError } = await supabase.rpc('handle_join_group_wallet', {
+        p_user_id: session.user.id,
+        p_group_id: id,
+        p_amount: total,
+        p_description: `Acceso a ${service.name}`
+      })
 
-        if (rpcError) throw rpcError
+      if (rpcError) throw rpcError
 
-        // Generar notificación
-        await supabase.from('notifications').insert({
-            user_id: session.user.id,
-            title: '¡Bienvenido al grupo!',
-            message: `Te has unido exitosamente a ${service.name}. Ya puedes ver tus credenciales en el dashboard.`,
-            type: 'success'
-        })
+      await supabase.from('notifications').insert({
+        user_id: session.user.id,
+        title: '¡Bienvenido al grupo!',
+        message: `Te has unido exitosamente a ${service.name}. Ya puedes ver tus credenciales en el dashboard.`,
+        type: 'success'
+      })
 
-        alert('¡Te has unido al grupo con éxito!')
-        navigate('/dashboard?tab=purchases')
+      alert('¡Te has unido al grupo con éxito!')
+      navigate('/dashboard?tab=purchases')
     } catch (err) {
-        console.error('Error joining group:', err)
-        alert('Error al unirse al grupo: ' + err.message)
+      console.error('Error joining group:', err)
+      alert('Error al unirse al grupo: ' + err.message)
     } finally {
-        setJoining(false)
+      setJoining(false)
+    }
+  }
+
+  // Pay with card (Stripe checkout for full amount)
+  const handlePayWithCard = async () => {
+    setJoining(true)
+    setShowPaymentModal(false)
+    
+    try {
+      const response = await fetch('/.netlify/functions/create-group-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          groupId: id,
+          userId: session.user.id,
+          amount: total,
+          serviceName: service.name
+        })
+      })
+
+      const { sessionId, error } = await response.json()
+      if (error) throw new Error(error)
+
+      const stripe = await stripePromise
+      await stripe.redirectToCheckout({ sessionId })
+    } catch (err) {
+      console.error('Error creating checkout:', err)
+      alert('Error al procesar el pago: ' + err.message)
+    } finally {
+      setJoining(false)
+    }
+  }
+
+  // Hybrid: Use wallet balance + card for remainder
+  const handlePayHybrid = async () => {
+    const walletAmount = Math.min(balance, total)
+    const cardAmount = total - walletAmount
+
+    setJoining(true)
+    setShowPaymentModal(false)
+
+    try {
+      // First, deduct from wallet
+      if (walletAmount > 0) {
+        const { error: walletError } = await supabase.rpc('handle_partial_wallet_payment', {
+          p_user_id: session.user.id,
+          p_amount: walletAmount,
+          p_description: `Pago parcial para ${service.name}`
+        })
+        if (walletError) throw walletError
+      }
+
+      // Then, redirect to Stripe for the rest
+      if (cardAmount > 0) {
+        const response = await fetch('/.netlify/functions/create-group-checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            groupId: id,
+            userId: session.user.id,
+            amount: cardAmount,
+            serviceName: service.name,
+            walletDeducted: walletAmount
+          })
+        })
+
+        const { sessionId, error } = await response.json()
+        if (error) throw new Error(error)
+
+        const stripe = await stripePromise
+        await stripe.redirectToCheckout({ sessionId })
+      }
+    } catch (err) {
+      console.error('Error with hybrid payment:', err)
+      alert('Error al procesar el pago: ' + err.message)
+    } finally {
+      setJoining(false)
     }
   }
 
@@ -305,7 +388,7 @@ const GroupDetailPage = () => {
                             </div>
 
                              <button 
-                                onClick={handleJoinGroup}
+                                onClick={handlePaymentClick}
                                 disabled={joining || availableSlots === 0}
                                 className="w-full sm:w-auto px-8 py-4 bg-[#EF534F] hover:bg-[#e0403c] text-white font-bold rounded-xl shadow-lg shadow-red-200 transition-all transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
                             >
@@ -423,6 +506,112 @@ const GroupDetailPage = () => {
             </div>
         </div>
       </div>
+
+      {/* Payment Method Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-xl font-bold">Método de Pago</h3>
+                  <p className="text-white/80 text-sm mt-1">Elige cómo pagar €{total.toFixed(2)}</p>
+                </div>
+                <button 
+                  onClick={() => setShowPaymentModal(false)}
+                  className="text-white/80 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Balance Display */}
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                    <Wallet className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Tu saldo</p>
+                    <p className="text-lg font-bold text-gray-900">€{balance.toFixed(2)}</p>
+                  </div>
+                </div>
+                {balance >= total && (
+                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                    Saldo suficiente
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Payment Options */}
+            <div className="p-6 space-y-3">
+              {/* Option 1: Pay with Wallet (if sufficient balance) */}
+              {balance >= total && (
+                <button
+                  onClick={handlePayWithWallet}
+                  disabled={joining}
+                  className="w-full p-4 border-2 border-green-500 bg-green-50 rounded-xl hover:bg-green-100 transition-all flex items-center gap-4"
+                >
+                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                    <Wallet className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-bold text-gray-900">Pagar con Billetera</p>
+                    <p className="text-sm text-gray-500">Usar €{total.toFixed(2)} de tu saldo</p>
+                  </div>
+                  <span className="text-green-600 font-bold">Recomendado</span>
+                </button>
+              )}
+
+              {/* Option 2: Hybrid Payment (if partial balance) */}
+              {balance > 0 && balance < total && (
+                <button
+                  onClick={handlePayHybrid}
+                  disabled={joining}
+                  className="w-full p-4 border-2 border-indigo-500 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-all flex items-center gap-4"
+                >
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-indigo-500 rounded-full flex items-center justify-center">
+                    <Wallet className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <p className="font-bold text-gray-900">Billetera + Tarjeta</p>
+                    <p className="text-sm text-gray-500">
+                      €{balance.toFixed(2)} saldo + €{(total - balance).toFixed(2)} tarjeta
+                    </p>
+                  </div>
+                  <span className="text-indigo-600 font-bold">Recomendado</span>
+                </button>
+              )}
+
+              {/* Option 3: Pay with Card */}
+              <button
+                onClick={handlePayWithCard}
+                disabled={joining}
+                className="w-full p-4 border-2 border-gray-200 bg-white rounded-xl hover:bg-gray-50 transition-all flex items-center gap-4"
+              >
+                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                  <CreditCard className="w-6 h-6 text-gray-600" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-bold text-gray-900">Pagar con Tarjeta</p>
+                  <p className="text-sm text-gray-500">Pago completo €{total.toFixed(2)}</p>
+                </div>
+              </button>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 pb-6">
+              <p className="text-xs text-gray-400 text-center">
+                🔒 Pago seguro procesado por Stripe
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
