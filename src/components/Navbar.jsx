@@ -3,6 +3,7 @@ import { Menu, X, Globe, Home, HeadphonesIcon, CreditCard, Search, User, Plus, L
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useWallet } from '../hooks/useWallet'
+import NotificationBell from './NotificationBell'
 
 const Navbar = () => {
   const navigate = useNavigate()
@@ -125,6 +126,9 @@ const Navbar = () => {
               <Globe className="w-4 h-4 text-white" />
               <span className="text-white text-xs font-bold">ES</span>
             </button>
+
+            {/* Notifications */}
+            {user && <NotificationBell userId={user.id} />}
             
             {/* User Dropdown / Login Button */}
             {user ? (

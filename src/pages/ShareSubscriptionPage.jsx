@@ -94,6 +94,14 @@ const ShareSubscriptionPage = () => {
 
       if (insertError) throw insertError
 
+      // Generar notificación para el usuario
+      await supabase.from('notifications').insert({
+          user_id: session.user.id,
+          title: '¡Grupo Creado Exitamente!',
+          message: `Tu grupo de ${selectedService.name} ya está disponible para que otros se unan.`,
+          type: 'success'
+      })
+
       setStep(3)
     } catch (err) {
       console.error('Error creating group:', err)

@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-01-29
+
+### Added
+- **System Notifications (Realtime)**: Integrated notification system with `notifications` table, RLS, and realtime subscriptions.
+- **NotificationBell**: New UI component in Navbar to view, read, and delete notifications.
+- **Automatic Alerts**: Triggers added for: Successful Group Join, Wallet Recharge, New Group Creation, and Credential Updates.
+- **Vite Config Hardening**: Forced host and strict port configuration to ensure stability with `netlify dev` on Windows.
+
+### Changed
+- **Wallet Unification**: Centralized all recharge logic into a reusable `RechargeModal` component, ensuring consistency between Dashboard and Wallet Page.
+- **Dashboard Feedback**: Improved user feedback on dashboard actions with immediate alerts.
+
 ## [1.1.0] - 2026-01-29
 
 ### Added
@@ -13,7 +25,9 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - **API Robustness**: Improved error handling for Netlify Functions, identifying common setup issues like incorrect ports.
-- **UI/UX**: Refactored `DashboardPage` and `WalletPage` to use a consistent Fintech-inspired design.
+- **Unified Recharge**: Extracted local recharge logic into a shared `RechargeModal` component for Dashboard and Wallet.
+- **Premium Design**: Re-implemented the "Premium Red" aesthetic with custom icons and solid red accents in the recharge flow.
+- **Port Detection**: Added helpful error messaging for local development regarding Netlify's port 8888.
 
 ## [1.0.2] - 2026-01-28
 

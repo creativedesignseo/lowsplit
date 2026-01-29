@@ -18,6 +18,19 @@ export default function WalletPage() {
         navigate('/login')
       } else {
         setUser(session.user)
+        
+        // Manejar notificación de éxito si viene de Stripe
+        const params = new URLSearchParams(window.location.search)
+        if (params.get('success') === 'true') {
+            supabase.from('notifications').insert({
+                user_id: session.user.id,
+                title: 'Recarga Exitosa',
+                message: 'Tu saldo ha sido actualizado correctamente.',
+                type: 'success'
+            }).then(() => {
+                window.history.replaceState({}, document.title, window.location.pathname)
+            })
+        }
       }
     })
   }, [])

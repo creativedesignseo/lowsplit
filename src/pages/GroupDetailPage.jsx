@@ -127,6 +127,14 @@ const GroupDetailPage = () => {
 
         if (rpcError) throw rpcError
 
+        // Generar notificación
+        await supabase.from('notifications').insert({
+            user_id: session.user.id,
+            title: '¡Bienvenido al grupo!',
+            message: `Te has unido exitosamente a ${service.name}. Ya puedes ver tus credenciales en el dashboard.`,
+            type: 'success'
+        })
+
         alert('¡Te has unido al grupo con éxito!')
         navigate('/dashboard?tab=purchases')
     } catch (err) {

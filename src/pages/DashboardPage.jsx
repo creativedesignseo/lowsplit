@@ -39,6 +39,22 @@ const DashboardPage = () => {
   const dataLoadedRef = useRef(false)
 
   useEffect(() => {
+    const success = searchParams.get('success')
+    if (success === 'true' && session?.user) {
+        // Generar notificación de recarga exitosa
+        supabase.from('notifications').insert({
+            user_id: session.user.id,
+            title: 'Recarga Exitosa',
+            message: 'Tu saldo ha sido actualizado correctamente.',
+            type: 'success'
+        }).then(() => {
+            // Limpiar el parámetro de la URL
+            window.history.replaceState({}, document.title, window.location.pathname)
+        })
+    }
+  }, [searchParams, session])
+
+  useEffect(() => {
     let isMounted = true
     
     const loadData = async () => {
@@ -228,6 +244,14 @@ const DashboardPage = () => {
           })
           setSales(updatedSales)
           setEditingCreds(null)
+
+          // Generar notificación para el administrador
+          await supabase.from('notifications').insert({
+              user_id: session.user.id,
+              title: 'Credenciales Actualizadas',
+              message: 'Has actualizado con éxito el acceso para tu grupo compartido.',
+              type: 'info'
+          })
           
       } catch (error) {
           console.error('Error updating creds:', error)
