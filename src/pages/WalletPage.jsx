@@ -64,6 +64,24 @@ export default function WalletPage() {
     }
   }
 
+  const handleDebugTopup = async () => {
+    if (!user) return
+    try {
+      const { error } = await supabase.rpc('handle_wallet_topup', {
+        p_user_id: user.id,
+        p_amount: 10,
+        p_stripe_id: 'debug_' + Date.now(),
+        p_description: 'Recarga de depuración (Local)'
+      })
+      if (error) throw error
+      alert('¡Saldo de prueba añadido! +10€ (Refresca si no cambia)')
+      window.location.reload()
+    } catch (error) {
+      console.error('Debug topup error:', error)
+      alert('Error en recarga de depuración: ' + error.message)
+    }
+  }
+
   const navigateMonth = (direction) => {
     setCurrentMonth(prev => {
       const newDate = new Date(prev)
@@ -185,6 +203,19 @@ export default function WalletPage() {
               </div>
               Retirar Fondos
             </button>
+
+            {/* Debug Button only for Localhost */}
+            {window.location.hostname === 'localhost' && (
+              <button 
+                onClick={handleDebugTopup}
+                className="col-span-2 flex items-center justify-center gap-3 py-4 bg-yellow-400 text-yellow-900 rounded-[18px] font-black text-sm hover:bg-yellow-300 transition-all hover:scale-[1.01] active:scale-[0.99]"
+              >
+                <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-yellow-900" />
+                </div>
+                Añadir €10 (DEBUG LOCAL)
+              </button>
+            )}
           </div>
 
           {/* Transactions History */}
