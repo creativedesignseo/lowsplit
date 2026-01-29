@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Menu, X, Globe, Home, HeadphonesIcon, CreditCard, Search, User, Plus, LogOut, Settings, LayoutDashboard, HelpCircle, ChevronDown, Zap, Wallet } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { useWallet } from '../hooks/useWallet'
 
 const Navbar = () => {
   const navigate = useNavigate()
@@ -10,6 +11,7 @@ const Navbar = () => {
   const location = useLocation()
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)
+  const { balance } = useWallet(user?.id)
 
   useEffect(() => {
     const fetchUserAndProfile = async () => {
@@ -156,15 +158,23 @@ const Navbar = () => {
                           <p className="text-xs text-gray-400">Información personal</p>
                       </div>
 
-                      {/* Savings Banner */}
+                      {/* Wallet Balance Banner */}
                       <div className="px-4 py-2">
-                          <div className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-3 flex items-center justify-between text-white shadow-lg shadow-gray-200">
+                          <Link 
+                            to="/wallet"
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl p-3 flex items-center justify-between text-white shadow-lg shadow-gray-200 hover:scale-[1.02] transition-transform block"
+                          >
                               <div>
-                                  <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Ahorro Total</p>
-                                  <p className="text-lg font-black text-[#EF534F]">€0.00</p>
+                                  <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Saldo Disponible</p>
+                                  <p className="text-lg font-black text-[#EF534F]">
+                                    €{balance !== undefined ? balance.toFixed(2) : '0.00'}
+                                  </p>
                               </div>
-                              <Zap className="w-5 h-5 text-yellow-400" fill="currentColor" />
-                          </div>
+                              <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+                                <Wallet className="w-4 h-4 text-white" />
+                              </div>
+                          </Link>
                       </div>
                       
                       {/* Menu Items */}

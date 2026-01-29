@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - **Stripe Top-ups**: Direct recharge functionality via Stripe Checkout and Netlify Functions.
 - **Join with Balance**: Capability to join subscription groups by deducting funds directly from the internal wallet.
 - **Wallet Page**: Redesigned `/wallet` page with premium UI, real-time balance, and monthly transaction history.
+- **Navbar Integration**: Replaced the static 'Total Savings' in the user menu with a live 'Available Balance' link that navigates directly to the wallet.
 
 ### Fixed
 - **API Robustness**: Improved error handling for Netlify Functions, identifying common setup issues like incorrect ports.
