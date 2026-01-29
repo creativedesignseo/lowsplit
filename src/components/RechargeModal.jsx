@@ -11,7 +11,7 @@ export default function RechargeModal({ isOpen, onClose, user }) {
     if (!user) return
     setRecharging(true)
     try {
-      const response = await fetch('/.netlify/functions/create-topup-session', {
+      const response = await fetch('/api/create-topup-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

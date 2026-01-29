@@ -30,7 +30,7 @@ const AdminUsers = () => {
       
       setCurrentUserRole(profile?.role)
 
-      const response = await fetch('/.netlify/functions/admin-users', {
+      const response = await fetch('/api/admin-users', {
         headers: {
             'Authorization': `Bearer ${session.access_token}`
         }
@@ -52,7 +52,7 @@ const AdminUsers = () => {
     if (!window.confirm(`Are you sure you want to change this user's role to ${newRole}?`)) return
 
     try {
-        const response = await fetch('/.netlify/functions/admin-users', {
+        const response = await fetch('/api/admin-users', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${session.access_token}`,
@@ -79,7 +79,7 @@ const AdminUsers = () => {
     if (!window.confirm(`Are you sure you want to ${currentStatus ? 'unban' : 'ban'} this user?`)) return
 
     try {
-        const response = await fetch('/.netlify/functions/admin-users', {
+        const response = await fetch('/api/admin-users', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${session.access_token}`,

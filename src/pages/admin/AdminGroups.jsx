@@ -24,7 +24,7 @@ const AdminGroups = () => {
 
       // 1. Try Netlify Function first
       try {
-          const response = await fetch('/.netlify/functions/admin-groups', {
+          const response = await fetch('/api/admin-groups', {
             headers: { 'Authorization': `Bearer ${session.access_token}` }
           })
           
@@ -99,7 +99,7 @@ const AdminGroups = () => {
     try {
         const { data: { session } } = await supabase.auth.getSession()
         
-        const response = await fetch('/.netlify/functions/admin-groups', {
+        const response = await fetch('/api/admin-groups', {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${session.access_token}`,

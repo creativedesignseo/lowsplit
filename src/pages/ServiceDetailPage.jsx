@@ -33,7 +33,7 @@ const ServiceDetailPage = () => {
       
       // Call our Netlify Function to create checkout session
       const response = await fetch(
-        '/.netlify/functions/create-checkout',
+        '/api/create-checkout',
         {
           method: 'POST',
           headers: {
@@ -81,7 +81,7 @@ const ServiceDetailPage = () => {
             return
         }
 
-        const response = await fetch('/.netlify/functions/manual-payment', {
+        const response = await fetch('/api/manual-payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

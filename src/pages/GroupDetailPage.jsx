@@ -157,7 +157,7 @@ const GroupDetailPage = () => {
     setShowPaymentModal(false)
     
     try {
-      const response = await fetch('/.netlify/functions/create-group-checkout', {
+      const response = await fetch('/api/create-group-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -202,7 +202,7 @@ const GroupDetailPage = () => {
 
       // Then, redirect to Stripe for the rest
       if (cardAmount > 0) {
-        const response = await fetch('/.netlify/functions/create-group-checkout', {
+        const response = await fetch('/api/create-group-checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
