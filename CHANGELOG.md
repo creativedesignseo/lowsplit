@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-01-29
+
+### Added
+- **Wallet System**: New integrated balance system with `wallets` and `transactions` tables.
+- **Stripe Top-ups**: Direct recharge functionality via Stripe Checkout and Netlify Functions.
+- **Join with Balance**: Capability to join subscription groups by deducting funds directly from the internal wallet.
+- **Wallet Page**: Redesigned `/wallet` page with premium UI, real-time balance, and monthly transaction history.
+
+### Fixed
+- **API Robustness**: Improved error handling for Netlify Functions, identifying common setup issues like incorrect ports.
+- **UI/UX**: Refactored `DashboardPage` and `WalletPage` to use a consistent Fintech-inspired design.
+
 ## [1.0.2] - 2026-01-28
 
 ### CRITICAL FIXES (DATABASE & SECURITY)
