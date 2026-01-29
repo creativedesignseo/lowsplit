@@ -68,6 +68,11 @@ CREATE OR REPLACE FUNCTION public.handle_wallet_topup(
 )
 RETURNS VOID AS $$
 BEGIN
+    -- 0. Asegurar que la billetera existe (por si es un perfil antiguo sin ella)
+    INSERT INTO public.wallets (id, balance)
+    VALUES (p_user_id, 0.00)
+    ON CONFLICT (id) DO NOTHING;
+
     -- 1. Incrementar saldo en la billetera
     UPDATE public.wallets
     SET balance = balance + p_amount,
@@ -79,6 +84,7 @@ BEGIN
     VALUES (p_user_id, p_amount, 'deposit', 'completed', p_description);
 
     -- 3. Registrar en payment_transactions (Auditoría externa/Stripe)
+    -- Usamos INSERT ... ON CONFLICT por si el webhook se dispara dos veces (si hubiera índice único en stripe_id)
     INSERT INTO public.payment_transactions (user_id, amount, currency, status, stripe_payment_intent_id)
     VALUES (p_user_id, p_amount, 'EUR', 'completed', p_stripe_id);
 END;
