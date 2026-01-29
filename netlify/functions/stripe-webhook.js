@@ -37,10 +37,16 @@ exports.handler = async function(event) {
     };
   }
 
+  console.log('Received Stripe event type:', stripeEvent.type);
+
   if (stripeEvent.type === 'checkout.session.completed') {
     const session = stripeEvent.data.object;
     
-    console.log('Payment success:', session.id);
+    console.log('=== CHECKOUT SESSION COMPLETED ===' );
+    console.log('Session ID:', session.id);
+    console.log('Session metadata:', JSON.stringify(session.metadata));
+    console.log('Amount total:', session.amount_total);
+    console.log('Customer email:', session.customer_email);
 
     try {
       // 1. Identify User
@@ -66,21 +72,34 @@ exports.handler = async function(event) {
       const stripeId = session.payment_intent || session.id;
 
       // --- FLOW A: Wallet Top-Up ---
+      console.log('Extracted type:', type);
+      console.log('Extracted amountPaid:', amountPaid);
+      console.log('Extracted stripeId:', stripeId);
+
       if (type === 'top_up') {
         const userIdFromMetadata = session.metadata?.userId;
+        console.log('=== TOP-UP FLOW ===' );
         console.log('Processing Top-up for user:', userIdFromMetadata);
+        console.log('Amount:', amountPaid, 'EUR');
         
         if (userIdFromMetadata) {
-          const { error: rpcError } = await supabase.rpc('handle_wallet_topup', {
+          console.log('Calling handle_wallet_topup RPC...');
+          const { data: rpcData, error: rpcError } = await supabase.rpc('handle_wallet_topup', {
             p_user_id: userIdFromMetadata,
             p_amount: amountPaid,
             p_stripe_id: stripeId,
             p_description: `Recarga de saldo vía Stripe`
           });
           
-          if (rpcError) throw rpcError;
+          console.log('RPC response data:', rpcData);
+          if (rpcError) {
+            console.error('RPC ERROR:', rpcError);
+            throw rpcError;
+          }
           console.log('Top-up successful for user:', userIdFromMetadata);
           return { statusCode: 200, headers, body: JSON.stringify({ received: true }) };
+        } else {
+          console.log('ERROR: No userId in metadata!');
         }
       }
 
