@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-01-30
+
+### Changed
+- **Service Catalog Consolidation**: Refactored `seed_services.sql` to eliminate duplicate and mixed-case services (e.g., merged 'Spotify Family' into 'Spotify', 'Netflix Standard' into 'Netflix').
+- **Safe Data Migration**: Implemented SQL logic to safely migrate existing subscription groups to canonical services before deleting deprecated ones.
+- **Icon Asset Management**: Removed external image dependencies. All service logos are now served locally from `public/logos/`.
+- **UI Logic Upgrade**: Updated `utils.js` `getLogoUrl` to correctly differentiate between 'icon' (small) and 'full' (logotype) assets, ensuring better visual presentation in Service Cards.
+
+### Fixed
+- **Visual Asset Repairs**: Restored correct SVG assets for Duolingo, Disney+, HBO Max, and Crunchyroll.
+- **Database Integrity**: Added foreign key protection during catalog cleanup to prevent orphaned groups.
+
 ## [1.2.0] - 2026-01-29
 
 ### Added
