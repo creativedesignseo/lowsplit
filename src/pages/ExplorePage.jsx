@@ -1,10 +1,10 @@
 import { Helmet } from 'react-helmet-async'
 import { Link } from 'react-router-dom'
-import { Search, LayoutGrid, Tv, Music, Bot, Monitor, GraduationCap, Sparkles, Loader2, Gamepad2, Shield, Users, ChevronRight } from 'lucide-react'
+import { Search, LayoutGrid, Tv, Music, Bot, Monitor, GraduationCap, Sparkles, Loader2, Gamepad2, Shield, Users, ChevronRight, AlertCircle } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import { MOCK_SERVICES } from '../lib/data'
+import { SERVICE_CATEGORIES } from '../lib/data'
 import ServiceCard from '../components/ServiceCard'
 import { getLogoUrl } from '../lib/utils'
 
@@ -26,8 +26,8 @@ const ExplorePage = () => {
   const [activeCategory, setActiveCategory] = useState('todo')
   const [viewMode, setViewMode] = useState('services') // 'services' | 'groups'
 
-  // Fetch services from Supabase
-  const { data: services = MOCK_SERVICES, isLoading: isLoadingServices } = useQuery({
+  // Fetch services from Supabase ONLY (no more MOCK)
+  const { data: services = [], isLoading: isLoadingServices, error: servicesError } = useQuery({
     queryKey: ['services'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -36,10 +36,13 @@ const ExplorePage = () => {
         .eq('is_active', true)
         .order('category', { ascending: true })
       
-      if (error || !data || data.length === 0) return MOCK_SERVICES
-      return data
-    },
-    initialData: MOCK_SERVICES
+      if (error) {
+        console.error('Error fetching services:', error)
+        throw error
+      }
+      
+      return data || []
+    }
   })
 
   // Fetch available subscription groups from Supabase
@@ -267,7 +270,7 @@ const ExplorePage = () => {
                           <div className="flex items-center gap-4">
                             <div className="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-100 overflow-hidden relative">
                               <img 
-                                src={getLogoUrl(service?.slug)} 
+                                src={getLogoUrl(service?.slug, service?.icon_url)} 
                                 alt={service?.name} 
                                 className="w-full h-full object-cover" 
                               />

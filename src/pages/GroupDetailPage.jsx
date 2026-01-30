@@ -96,7 +96,7 @@ const GroupDetailPage = () => {
 
   const service = group.services
   const admin = group.profiles
-  const logoUrl = getLogoUrl(service?.slug)
+  const logoUrl = getLogoUrl(service?.slug, service?.icon_url)
   const availableSlots = (service?.max_slots || 4) - (group.slots_occupied || 1)
   const username = admin?.username || 'Usuario'
   const memberSince = new Date(admin?.created_at).toLocaleDateString()

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
-import { getEmojiForSlug, calculateSlotPrice, getLogoUrl } from '../lib/utils'
+import { getEmojiForSlug, calculateSlotPrice, getLogoUrl, getDefaultFeatures } from '../lib/utils'
 
 const ServiceCard = ({ service }) => {
   const [expanded, setExpanded] = useState(false)
@@ -19,9 +19,9 @@ const ServiceCard = ({ service }) => {
   }, [])
   
   const logoEmoji = getEmojiForSlug(service.slug)
-  const features = service.features || []
+  const features = service.features || getDefaultFeatures(service.category)
 
-  const logoUrl = getLogoUrl(service.slug, 'full')
+  const logoUrl = getLogoUrl(service.slug, service.icon_url, 'full')
 
   return (
     <div className="spu-card-wrapper w-full h-full">

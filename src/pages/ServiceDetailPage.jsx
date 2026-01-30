@@ -5,8 +5,7 @@ import { Check, ChevronLeft, Monitor, Smartphone, Laptop, Globe, Loader2, AlertC
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { stripePromise } from '../lib/stripe'
-import { MOCK_SERVICES } from '../lib/data'
-import { getLogoUrl, getEmojiForSlug, calculateSlotPrice } from '../lib/utils'
+import { getLogoUrl, getEmojiForSlug, calculateSlotPrice, getDefaultFeatures } from '../lib/utils'
 
 const ServiceDetailPage = () => {
   const { id: slug } = useParams()
@@ -149,21 +148,19 @@ const ServiceDetailPage = () => {
   const { data: service, isLoading: isLoadingService, error: errorService } = useQuery({
     queryKey: ['service', slug],
     queryFn: async () => {
-      // 1. Try to find in MOCK_SERVICES first (for demo speed/reliability)
-      const mock = MOCK_SERVICES.find(s => s.slug === slug || s.slug === slug.replace('-premium', ''))
-      if (mock) return mock
-
-      // 2. Fallback to DB
       const { data, error } = await supabase
         .from('services')
         .select('*')
         .eq('slug', slug)
         .single()
       
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching service:', error)
+        throw error
+      }
+      
       return data
-    },
-    initialData: () => MOCK_SERVICES.find(s => s.slug === slug || s.slug.includes(slug))
+    }
   })
 
   // Fetch Available Groups for this Service
@@ -233,8 +230,8 @@ const ServiceDetailPage = () => {
     )
   }
 
-  const logoUrl = getLogoUrl(service.slug)
-  const features = service.features || []
+  const logoUrl = getLogoUrl(service.slug, service.icon_url)
+  const features = service.features || getDefaultFeatures(service.category)
 
   return (
     <>

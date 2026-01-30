@@ -48,7 +48,7 @@ export async function handler(event) {
       ],
       mode: 'payment',
       success_url: `${event.headers.origin || event.headers.referer?.split('/').slice(0, 3).join('/')}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${event.headers.origin || event.headers.referer?.split('/').slice(0, 3).join('/')}/explore?payment=cancelled`,
+      cancel_url: `${event.headers.origin || event.headers.referer?.split('/').slice(0, 3).join('/')}/explore`,
       metadata: {
         groupId: groupId || '',
         months: String(months || 1),

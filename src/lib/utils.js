@@ -1,66 +1,104 @@
+// Utility functions for LowSplit
+// No more MOCK data - everything comes from Supabase
 
-export const getLogoUrl = (slug, type = 'icon') => {
-  // 1. Local overrides for Netflix
-  if (slug.includes('netflix')) {
-      return type === 'full' ? '/logos/netflix.svg' : '/logos/icon-netflix.svg'
-  }
-  
-  // 2. Local overrides for Prime Video
-  if (slug.includes('prime') || slug.includes('amazon')) {
-      return type === 'full' ? '/logos/primevideo.svg' : '/logos/icon-primevideo.svg'
+/**
+ * Gets the logo URL for a service
+ * @param {string} slug - Service slug (e.g., 'netflix', 'spotify')
+ * @param {string} iconUrl - Icon URL from database (preferred)
+ * @param {string} type - 'icon' for square icons, 'full' for full logos
+ * @returns {string|null} URL to the logo
+ */
+export const getLogoUrl = (slug, iconUrl = null, type = 'icon') => {
+  // Local files for main services (Prioritized to handle Full vs Icon logic)
+  const localLogos = {
+    'netflix': { icon: '/logos/icon-netflix.svg', full: '/logos/netflix.svg' },
+    'spotify': { icon: '/logos/icon-spotify.svg', full: '/logos/spotify.svg' },
+    'amazon-prime': { icon: '/logos/icon-primevideo.svg', full: '/logos/primevideo.svg' },
+    'prime': { icon: '/logos/icon-primevideo.svg', full: '/logos/primevideo.svg' },
+    'apple': { icon: '/logos/icon-apple-one.svg', full: '/logos/apple-one.svg' },
+    'disney': { icon: '/logos/icon-disneyplus.svg', full: '/logos/disneyplus.svg' },
+    'hbo': { icon: '/logos/icon-hbomax.svg', full: '/logos/hbomax.svg' },
+    'youtube': { icon: '/logos/icon-youtube.svg', full: '/logos/youtube.svg' },
+    'crunchyroll': { icon: '/logos/icon-crunchyroll.svg', full: '/logos/crunchyroll.svg' },
+    'chatgpt': { icon: '/logos/icon-chatgpt.svg', full: '/logos/chatgpt.svg' },
+    'nintendo': { icon: '/logos/icon-nintendo.svg', full: '/logos/nintendo.svg' },
+    'xbox': { icon: '/logos/icon-xbox.svg', full: '/logos/xbox.svg' },
+    'playstation': { icon: '/logos/icon-playstation.svg', full: '/logos/playstation.svg' },
+    'ps-plus': { icon: '/logos/icon-playstation.svg', full: '/logos/playstation.svg' },
+    'nordvpn': { icon: '/logos/icon-nordvpn.svg', full: '/logos/nordvpn.svg' },
+    'duolingo': { icon: '/logos/icon-duolingo.svg', full: '/logos/duolingo.svg' },
+    'microsoft': { icon: '/logos/icon-microsoft.svg', full: '/logos/microsoft.svg' },
+    'canva': { icon: '/logos/icon-canva.svg', full: '/logos/canva.svg' }
   }
 
-  // 3. Local overrides for Spotify
-  if (slug.includes('spotify')) {
-      return type === 'full' ? '/logos/spotify.svg' : '/logos/icon-spotify.svg'
+  // 1. Try to find local match first to respect specific 'text' vs 'icon' types
+  for (const [key, urls] of Object.entries(localLogos)) {
+    if (slug?.includes(key)) {
+      return type === 'full' ? urls.full : urls.icon
+    }
   }
 
-  // 4. Local overrides for Apple One
-  if (slug.includes('apple')) {
-      return type === 'full' ? '/logos/apple-one.svg' : '/logos/icon-apple-one.svg'
+  // 2. Fallback to DB URL if available (usually the icon)
+  if (iconUrl) {
+    return iconUrl
   }
 
-  // 2. Mapped URLs (mostly square icons)
-  const urls = {
-    spotify: "https://static.gamsgocdn.com/image/6d47adc2ee2ff09b0619c243178fd0e0.webp",
-    youtube: "https://static.gamsgocdn.com/image/e77cda6be20a7932313652873177810b.webp",
-    disney: "https://static.gamsgocdn.com/image/c6946da9047029676579ae2089851610.webp",
-    prime: "https://static.gamsgocdn.com/image/8c13063462058097d6d39699042b083c.webp",
-    hbo: "https://static.gamsgocdn.com/image/d367c29370cb8d672522718bb7b3699c.webp",
-    chatgpt: "https://static.gamsgocdn.com/image/09873fc003290de0d015c92473456c64.webp",
-    crunchyroll: "https://static.gamsgocdn.com/image/928e1d51de58f382a86566c5d9560f76.webp",
-    nordvpn: "https://static.gamsgocdn.com/image/6e7e43685323a6750036ee7bf507542c.webp",
-    duolingo: "https://static.gamsgocdn.com/image/05634865f33f6312a0212f71661d9a2a.png", 
-    canva: "https://static.gamsgocdn.com/image/fc7f17424683070732817d230182559e.png"
-  }
-  
-  const key = Object.keys(urls).find(k => slug.includes(k))
-  return key ? urls[key] : null
+  // 3. Default placeholder
+  return '/logos/default-service.svg'
 }
 
+/**
+ * Gets an emoji for a service slug (for UI decoration)
+ */
 export const getEmojiForSlug = (slug) => {
   const map = {
-    'netflix-premium': '🔴',
-    'netflix-standard': '🔴',
-    'spotify-family': '🎵',
-    'disney-plus': '✨',
-    'hbo-max': '🎬',
-    'youtube-premium': '▶️',
-    'duolingo-plus': '🦉',
-    'chatgpt-plus': '🤖',
-    'canva-pro': '🎨',
+    'netflix': '🔴',
+    'spotify': '🎵',
+    'disney': '✨',
+    'hbo': '🎬',
+    'youtube': '▶️',
+    'duolingo': '🦉',
+    'chatgpt': '🤖',
+    'canva': '🎨',
     'crunchyroll': '🍥',
-    'microsoft-365': '📊',
-    'apple-one': '🍎',
-    'amazon-prime': '📦',
-    'xbox-gamepass': '🎮',
-    'ps-plus-premium': '🎮',
+    'microsoft': '📊',
+    'apple': '🍎',
+    'amazon': '📦',
+    'prime': '📦',
+    'xbox': '🎮',
+    'playstation': '🎮',
+    'ps-plus': '🎮',
+    'nintendo': '🕹️',
     'nordvpn': '🔒'
   }
-  return map[slug] || '⚡'
+  
+  for (const [key, emoji] of Object.entries(map)) {
+    if (slug?.includes(key)) return emoji
+  }
+  return '⚡'
 }
 
+/**
+ * Calculates the slot price with margin
+ */
 export const calculateSlotPrice = (totalPrice, maxSlots, margin = 1.25) => {
   if (!totalPrice || !maxSlots) return '0.00'
   return ((totalPrice / maxSlots) * margin).toFixed(2)
+}
+
+/**
+ * Gets default features for a service category
+ */
+export const getDefaultFeatures = (category) => {
+  const features = {
+    streaming: ['Streaming HD/4K', 'Sin Anuncios', 'Descargas Offline', 'Multi-dispositivo'],
+    music: ['Música Sin Límites', 'Sin Anuncios', 'Modo Offline', 'Alta Calidad'],
+    gaming: ['Juego Online', 'Descargas Gratis', 'Contenido Exclusivo', 'Multi-plataforma'],
+    productivity: ['Apps Premium', 'Almacenamiento Nube', 'Colaboración', 'Sin Límites'],
+    ai: ['Acceso Completo', 'Sin Límites', 'Funciones Avanzadas', 'Prioridad'],
+    education: ['Sin Anuncios', 'Contenido Premium', 'Sin Límites', 'Certificados'],
+    security: ['Multi-dispositivo', 'Sin Registros', 'Alta Velocidad', 'Servidores Globales'],
+    bundle: ['Todo Incluido', 'Mejor Precio', 'Familia Completa', 'Sin Compromisos']
+  }
+  return features[category] || ['Acceso Completo', 'Sin Límites', 'Multi-dispositivo', 'Soporte']
 }
