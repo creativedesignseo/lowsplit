@@ -78,6 +78,8 @@ CREATE TABLE IF NOT EXISTS subscription_groups (
   slots_occupied INT DEFAULT 1 CHECK (slots_occupied >= 0),
   price_per_slot DECIMAL(10,2), -- Calculado: total_price / max_slots + comisión
   next_payment_date DATE,
+  invoice_verified BOOLEAN DEFAULT false,
+  instant_acceptance BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );

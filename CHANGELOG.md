@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1] - 2026-01-30
+
+### Added
+- **Super Admin Role**: Implemented `super_admin` role in `profiles` table to distinguish platform administrators.
+- **Official Groups UI**: Added distinct visual treatment for groups owned by Super Admins (red border, "Recomendado" badge, official logo).
+- **Sorting Logic**: Updated `ServiceDetailPage` to always prioritize Official Groups at the top of the list.
+
+### Fixed
+- **User Creation Trigger**: Fixed `handle_new_user` trigger to prevents race conditions and "Database Error" during manual user creation in Supabase Dashboard.
+- **Database Schema**: Added missing columns `invoice_verified` and `instant_acceptance` to `subscription_groups` table to prevent SQL errors.
+- **Profile Sync**: Added SQL script to sync users from Auth to Profiles if they were created during trigger outage.
+
 ## [1.3.0] - 2026-01-30
 
 ### Changed
