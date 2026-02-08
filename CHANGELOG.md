@@ -10,6 +10,8 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - **Dashboard Optimization**: Refactored `DashboardPage.jsx` to fetch data in parallel, significantly improving load times.
 - **Bundle Optimization**: Replaced named imports from `lucide-react` with direct path imports in `DashboardPage` and `ServiceDetail` to reduce bundle size.
+- **Design Standardization**: Enforced `rounded-xl` and official red `#EF534F` across all buttons and inputs.
+- **Design Audit Skill**: Updated `auditar-consistencia-diseno` with auto-fix capabilities.
 
 ## [1.3.1] - 2026-01-30
 

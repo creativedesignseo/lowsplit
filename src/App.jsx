@@ -13,6 +13,7 @@ import GroupDetailPage from './pages/GroupDetailPage'
 import ShareSubscriptionPage from './pages/ShareSubscriptionPage'
 import WalletPage from './pages/WalletPage'
 import TestPage from './pages/TestPage'
+import MarketplaceListPage from './pages/MarketplaceListPage'
 
 // Layout components
 import Navbar from './components/Navbar'
@@ -58,6 +59,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/explore" element={<ExplorePage />} />
           <Route path="/service/:id" element={<ServiceDetailPage />} />
+          <Route path="/marketplace/list/:id" element={<MarketplaceListPage />} />
           <Route path="/group/:id" element={<GroupDetailPage />} />
           <Route path="/share-subscription" element={<ShareSubscriptionPage />} />
           <Route path="/wallet" element={<WalletPage />} />

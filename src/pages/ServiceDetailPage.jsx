@@ -1,26 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import Check from 'lucide-react/dist/esm/icons/check'
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left'
-import Monitor from 'lucide-react/dist/esm/icons/monitor'
-import Smartphone from 'lucide-react/dist/esm/icons/smartphone'
-import Laptop from 'lucide-react/dist/esm/icons/laptop'
-import Globe from 'lucide-react/dist/esm/icons/globe'
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
 import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check'
 import Zap from 'lucide-react/dist/esm/icons/zap'
-import User from 'lucide-react/dist/esm/icons/user'
-import Users from 'lucide-react/dist/esm/icons/users'
-import MessageSquareText from 'lucide-react/dist/esm/icons/message-square-text'
-import Smile from 'lucide-react/dist/esm/icons/smile'
-import Send from 'lucide-react/dist/esm/icons/send'
-import Shield from 'lucide-react/dist/esm/icons/shield'
-import Plus from 'lucide-react/dist/esm/icons/plus'
+import Smartphone from 'lucide-react/dist/esm/icons/smartphone'
+import Check from 'lucide-react/dist/esm/icons/check'
+import Store from 'lucide-react/dist/esm/icons/store'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import { stripePromise } from '../lib/stripe'
 import { getLogoUrl, getEmojiForSlug, calculateSlotPrice, getDefaultFeatures } from '../lib/utils'
 
 const ServiceDetailPage = () => {
@@ -28,137 +18,10 @@ const ServiceDetailPage = () => {
   
   // State for UI selections
   const [selectedPlan, setSelectedPlan] = useState(null)
-  const [selectedType, setSelectedType] = useState({ id: 1, name: '1 posición', description: 'Compartido', available: true })
-  const [autoRenew, setAutoRenew] = useState(true)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [paymentError, setPaymentError] = useState(null)
   const [showBizumModal, setShowBizumModal] = useState(false)
   const navigate = useNavigate()
-
-  // Handle Stripe Checkout
-  const handlePayment = async () => {
-    if (!selectedPlan || !service) return
-    
-    setIsProcessingPayment(true)
-    setPaymentError(null)
-
-    try {
-      // Get user session
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      // Call our Netlify Function to create checkout session
-      const response = await fetch(
-        '/.netlify/functions/create-checkout',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            serviceName: service.name,
-            priceAmount: selectedPlan.totalPrice,
-            months: selectedPlan.months,
-            userEmail: session?.user?.email || null,
-            groupId: null // Will be filled when joining specific group
-          })
-        }
-      )
-
-      const data = await response.json()
-
-      if (data.error) {
-        throw new Error(data.error)
-      }
-
-      // Redirect to Stripe Checkout
-      if (data.url) {
-        window.location.href = data.url
-      }
-    } catch (error) {
-      console.error('Payment error:', error)
-      setPaymentError(error.message || 'Error al procesar el pago')
-    } finally {
-      setIsProcessingPayment(false)
-    }
-  }
-
-  // Handle Bizum Payment (Manual)
-  const handleBizumPayment = async () => {
-    if (!selectedPlan || !service) return
-    
-    setIsProcessingPayment(true)
-    
-    try {
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (!session) {
-            navigate('/auth')
-            return
-        }
-
-        const response = await fetch('/.netlify/functions/manual-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: session.user.id,
-                userEmail: session.user.email,
-                // Assuming we are in Explore mode (no specific group ID yet, so we just create transaction)
-                // BUT wait, if we are in Explore, we don't have a groupId unless we select one. 
-                // The current page logic is for "Service Detail", which implies creating a NEW subscription or joining?
-                // The current flow in `ServiceDetailPage` doesn't seem to have `groupId` from params unless passed?
-                // The `create-checkout` function had `groupId: null`. 
-                // If this is "buy a plan", do we create a group? Or just a transaction?
-                // The webhook logic for `create-checkout` creates a membership ONLY if `groupId` exists.
-                // If I am buying generic credit? 
-                // Ah, looking at `ShareSubscriptionPage`, that's where we create groups.
-                // `ServiceDetailPage` seems to be for joining? Or buying "access"?
-                // Let's look at `create-checkout` usage in `ServiceDetailPage`: `groupId: null`.
-                // So buying here just records a transaction. It doesn't seem to assign a group unless one is picked.
-                // Re-reading `ServiceDetailPage`... it doesn't have group selection.
-                // It seems this page is for "Buying a Service" -> which might mean "Getting assigned to a group automatically" or "Credits"?
-                // In Phase 4 logic: `memberships` require a `group_id`.
-                // If `groupId` is null, the webhook does NOT create a membership.
-                // So... what is the point of this page if it doesn't join a group?
-                // Ah, maybe the user is supposed to find a group in `/explore` and click it?
-                // Use case: "Netflix Premium" -> Buy.
-                // If I click "Pagar", it creates a transaction.
-                // Then what? Support manually assigns?
-                // Given "LowSplit" model usually means joining a group.
-                // For now, I will mirror the Stripe logic: `groupId: null`. 
-                // The transaction will be recorded. The "Membership" creation might be manual by admin later?
-                // Or maybe I should auto-create a group for them?
-                // User said: "He enviado el pago" -> "Activación Inmediata".
-                // If I treat this as "Add funds", fine.
-                // Let's match `create-checkout` behavior.
-                serviceName: service.name,
-                amount: selectedPlan.totalPrice,
-                months: selectedPlan.months
-            })
-        })
-
-        const data = await response.json()
-        
-        if (data.error) throw new Error(data.error)
-
-        // Success -> Redirect to Dashboard
-        setShowBizumModal(false)
-        navigate('/dashboard?payment=success_bizum')
-
-    } catch (error) {
-        console.error('Bizum error:', error)
-        alert('Error al procesar: ' + error.message)
-    } finally {
-        setIsProcessingPayment(false)
-    }
-  }
-  
-  // Filters State
-  const [filters, setFilters] = useState({
-      planType: 'all',
-      verified: false,
-      instant: false,
-      sortBy: 'price'
-  })
 
   // Fetch specific service from Supabase
   const { data: service, isLoading: isLoadingService, error: errorService } = useQuery({
@@ -179,38 +42,6 @@ const ServiceDetailPage = () => {
     }
   })
 
-  // Fetch Available Groups for this Service
-  const { data: groups, isLoading: isLoadingGroups } = useQuery({
-      queryKey: ['groups', service?.id, filters],
-      enabled: !!service,
-      queryFn: async () => {
-          let query = supabase
-              .from('subscription_groups')
-              .select(`
-                  *,
-                  admin:profiles!admin_id (id, full_name, avatar_url, reputation_score)
-              `)
-              .eq('service_id', service.id)
-              .eq('status', 'available')
-          
-          if (filters.verified) query = query.eq('invoice_verified', true)
-          if (filters.instant) query = query.eq('instant_acceptance', true)
-          
-          const { data, error } = await query
-          if (error) {
-              console.warn("Could not fetch groups (possibly missing columns):", error)
-              return [] 
-          }
-          
-          // Client-side sorting because some fields might be calculated or JSON
-          let sortedData = data || []
-          if (filters.sortBy === 'price') sortedData.sort((a, b) => a.price_per_slot - b.price_per_slot)
-          if (filters.sortBy === 'reputation') sortedData.sort((a, b) => (b.admin?.reputation_score || 0) - (a.admin?.reputation_score || 0))
-
-          return sortedData
-      }
-  })
-
   // Dynamic Plans Calculation (for Official Stock reference)
   const plans = service ? (() => {
     const monthlyPrice = parseFloat(calculateSlotPrice(service.total_price, service.max_slots))
@@ -225,6 +56,72 @@ const ServiceDetailPage = () => {
     }
   }, [plans, selectedPlan])
 
+  // Handle Stripe Checkout
+  const handlePayment = async () => {
+    if (!selectedPlan || !service) return
+    
+    setIsProcessingPayment(true)
+    setPaymentError(null)
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      const response = await fetch(
+        '/.netlify/functions/create-checkout',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            serviceName: service.name,
+            priceAmount: selectedPlan.totalPrice,
+            months: selectedPlan.months,
+            userEmail: session?.user?.email || null,
+            groupId: null 
+          })
+        }
+      )
+
+      const data = await response.json()
+      if (data.error) throw new Error(data.error)
+      if (data.url) window.location.href = data.url
+    } catch (error) {
+      console.error('Payment error:', error)
+      setPaymentError(error.message || 'Error al procesar el pago')
+    } finally {
+      setIsProcessingPayment(false)
+    }
+  }
+
+  // Handle Bizum Payment
+  const handleBizumPayment = async () => {
+    if (!selectedPlan || !service) return
+    setIsProcessingPayment(true)
+    try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) { navigate('/auth'); return }
+
+        const response = await fetch('/.netlify/functions/manual-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: session.user.id,
+                userEmail: session.user.email,
+                serviceName: service.name,
+                amount: selectedPlan.totalPrice,
+                months: selectedPlan.months
+            })
+        })
+        const data = await response.json()
+        if (data.error) throw new Error(data.error)
+        setShowBizumModal(false)
+        navigate('/dashboard?payment=success_bizum')
+    } catch (error) {
+        console.error('Bizum error:', error)
+        alert('Error al procesar: ' + error.message)
+    } finally {
+        setIsProcessingPayment(false)
+    }
+  }
 
   if (isLoadingService) {
     return (
@@ -239,7 +136,7 @@ const ServiceDetailPage = () => {
       <div className="min-h-screen pt-24 px-4 text-center bg-[#FAFAFA]">
         <AlertCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
         <h2 className="text-xl font-bold text-gray-900">Servicio no encontrado</h2>
-        <Link to="/explore" className="mt-4 inline-flex px-6 py-2 bg-[#EF534F] text-white rounded-full font-medium shadow-lg shadow-red-200">
+        <Link to="/explore" className="mt-4 inline-flex px-6 py-2 bg-[#EF534F] text-white rounded-xl font-medium shadow-lg shadow-red-200">
             Volver a explorar
         </Link>
       </div>
@@ -248,264 +145,137 @@ const ServiceDetailPage = () => {
 
   const logoUrl = getLogoUrl(service.slug, service.icon_url)
   const features = service.features || getDefaultFeatures(service.category)
+  const monthlyPrice = selectedPlan?.pricePerMonth || 0
 
   return (
     <>
       <Helmet>
-        <title>{service.name} - LowSplit</title>
-        <meta name="description" content={service.description} />
+        <title>{service.name} - LowSplit Oficial</title>
+        <meta name="description" content={`Consigue ${service.name} al mejor precio. Garantía total y activación inmediata.`} />
       </Helmet>
 
       <div className="min-h-screen bg-[#FAFAFA] pt-[70px]">
         {/* Header con back button */}
         <div className="bg-white border-b border-gray-100">
-          <div className="max-w-[1100px] mx-auto px-4 py-4">
+          <div className="max-w-[1100px] mx-auto px-4 py-4 flex justify-between items-center">
             <Link to="/explore" className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-[#EF534F] transition-colors">
               <ChevronLeft className="w-4 h-4" />
-              <span>Volver al catálogo</span>
+              <span>Volver</span>
             </Link>
           </div>
         </div>
 
-        <div className="max-w-[1240px] mx-auto px-4 py-8">
-            <div className="flex flex-col lg:flex-row gap-8">
+        <div className="max-w-4xl mx-auto px-4 py-8 sm:py-12">
             
-            {/* SIDEBAR FILTERS */}
-            <div className="w-full lg:w-[320px] flex-shrink-0 space-y-8">
-                {/* Intro Card */}
-                <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 text-center">
-                    <div className="w-20 h-20 bg-white border border-gray-100 rounded-2xl shadow-sm flex items-center justify-center mx-auto mb-4 overflow-hidden relative">
-                        {logoUrl ? (
-                            <img src={logoUrl} alt={service.name} className="w-full h-full object-cover" />
-                        ) : (
-                            <span className="text-3xl">{getEmojiForSlug(service.slug)}</span>
-                        )}
-                    </div>
-                    <h1 className="text-2xl font-black text-gray-900 mb-2">{service.name}</h1>
-                    <p className="text-sm text-gray-500 font-medium leading-relaxed">
-                        Únete a un grupo verificado y ahorra hasta un 80% en tu suscripción mensual.
-                    </p>
-                </div>
-
-                {/* Filters */}
-                <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100">
-                    <h3 className="font-bold text-gray-900 mb-6 flex items-center gap-2">
-                        <Monitor className="w-5 h-5 text-gray-400" /> 
-                        Filtros
-                    </h3>
-
-                    {/* Filter: Plan Type */}
-                    <div className="mb-8">
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-3">Tipo de Plan</label>
-                        <div className="flex flex-wrap gap-2">
-                            <button className="px-4 py-2 bg-gray-900 text-white text-xs font-bold rounded-full">Todos</button>
-                            <button className="px-4 py-2 bg-gray-100 text-gray-500 text-xs font-bold rounded-full hover:bg-gray-200 transition-colors">Premium</button>
-                            <button className="px-4 py-2 bg-gray-100 text-gray-500 text-xs font-bold rounded-full hover:bg-gray-200 transition-colors">Estándar</button>
-                        </div>
-                    </div>
-
-                    {/* Filter: Verified Invoice */}
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <ShieldCheck className="w-4 h-4 text-green-600" />
-                                <span className="font-bold text-gray-900 text-sm">Factura Verificada</span>
-                            </div>
-                            <p className="text-xs text-gray-400 leading-tight">Solo grupos con recibo subido</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input 
-                                type="checkbox" 
-                                className="sr-only peer"
-                                checked={filters.verified}
-                                onChange={(e) => setFilters(prev => ({ ...prev, verified: e.target.checked }))} 
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
-                        </label>
-                    </div>
-
-                    {/* Filter: Instant Acceptance */}
-                    <div className="flex items-center justify-between mb-6">
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <Zap className="w-4 h-4 text-yellow-500" fill="currentColor" />
-                                <span className="font-bold text-gray-900 text-sm">Aceptación Inmediata</span>
-                            </div>
-                            <p className="text-xs text-gray-400 leading-tight">Únete sin esperar aprobación</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input 
-                                type="checkbox" 
-                                className="sr-only peer"
-                                checked={filters.instant}
-                                onChange={(e) => setFilters(prev => ({ ...prev, instant: e.target.checked }))}
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
-                        </label>
-                    </div>
-
-                     {/* Filter: Sort */}
-                     <div className="border-t border-gray-100 pt-6">
-                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-3">Ordenar por</label>
-                        <div className="space-y-1">
-                             <button className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
-                                <span>Índice de confianza</span>
-                                <ChevronLeft className="w-4 h-4 rotate-270 text-gray-300" />
-                             </button>
-                             <button className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
-                                <span>Tiempo de respuesta</span>
-                                <ChevronLeft className="w-4 h-4 rotate-270 text-gray-300" />
-                             </button>
-                             <button className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
-                                <span>Precio más bajo</span>
-                                <ChevronLeft className="w-4 h-4 rotate-270 text-gray-300" />
-                             </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* MAIN LIST: Available Groups */}
-            <div className="flex-1 space-y-4">
+            {/* PRODUCT HERO */}
+            <div className="bg-white rounded-[32px] p-6 sm:p-10 shadow-xl shadow-gray-200/50 border border-gray-100 relative overflow-hidden">
                 
-                {/* Official LowSplit Card (Pinned) */}
-                <div className="bg-white rounded-[20px] p-4 shadow-sm border border-red-50 flex flex-col sm:flex-row items-center gap-4 group hover:shadow-md transition-all relative overflow-hidden mb-5">
-                     {/* "Official" Badge Banner */}
-                     <div className="absolute top-0 right-0 bg-red-50 text-[#EF534F] text-[9px] font-black px-3 py-1 rounded-bl-xl uppercase tracking-widest z-10">
-                        Recomendado
-                     </div>
-                     
-                     {/* Thick Red Bar */}
-                     <div className="absolute left-2 top-2 bottom-2 w-1 bg-[#EF534F] rounded-full"></div>
-                     
-                     {/* Logo Section */}
-                     <div className="pl-4 pt-4 sm:pt-0 sm:pl-6 w-full sm:w-auto flex justify-center sm:block">
-                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 border-[#EF534F] p-1 flex items-center justify-center bg-white shadow-sm relative">
-                             <img src="/logo.png" className="w-full h-full object-contain rounded-full" alt="LowSplit" />
-                             <div className="absolute -bottom-1 -right-1 bg-[#EF534F] text-white rounded-full p-0.5 border-2 border-white">
-                                <ShieldCheck className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                             </div>
-                        </div>
-                     </div>
+                {/* Background Decor */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-red-50 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
-                     {/* Content Section */}
-                     <div className="flex-1 text-center sm:text-left space-y-1 w-full pl-3 sm:pl-0">
-                        <div className="flex items-center justify-center sm:justify-start gap-1.5">
-                            <h3 className="text-lg sm:text-xl font-black text-gray-900 leading-tight">LowSplit Oficial</h3>
-                            <ShieldCheck className="w-4 h-4 text-[#EF534F]" fill="#FEF2F2" />
-                        </div>
-                        <div className="flex flex-wrap justify-center sm:justify-start items-center gap-1.5">
-                            <span className="flex items-center gap-1 bg-green-50 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide border border-green-100">
-                                <ShieldCheck className="w-3 h-3" /> Verificado
-                            </span>
-                            <span className="flex items-center gap-1 bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide border border-blue-100">
-                                <Zap className="w-3 h-3" /> Auto
-                            </span>
-                        </div>
-                     </div>
-
-                     {/* Price & Action Section */}
-                     <div className="flex items-center gap-4 pl-3 sm:pl-6 border-t sm:border-t-0 sm:border-l border-gray-100 w-full sm:w-auto justify-between sm:justify-end pt-3 sm:pt-0 mt-1 sm:mt-0">
-                        <div className="text-right">
-                            <div className="text-xl sm:text-2xl font-black text-[#EF534F]">
-                                €{(selectedPlan?.pricePerMonth || 3.99).toFixed(2)}
+                <div className="flex flex-col md:flex-row gap-8 items-start relative z-10">
+                    
+                    {/* Left: Image & Badge */}
+                    <div className="flex-shrink-0 mx-auto md:mx-0">
+                        <div className="w-32 h-32 sm:w-40 sm:h-40 bg-white border-4 border-white shadow-2xl rounded-[2rem] flex items-center justify-center relative">
+                            {logoUrl ? (
+                                <img src={logoUrl} alt={service.name} className="w-full h-full object-cover rounded-[1.7rem]" />
+                            ) : (
+                                <span className="text-6xl">{getEmojiForSlug(service.slug)}</span>
+                            )}
+                            <div className="absolute -bottom-3 -right-3 bg-[#EF534F] text-white p-2 rounded-xl shadow-lg border-4 border-white">
+                                <ShieldCheck className="w-6 h-6" />
                             </div>
-                            <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block -mt-1">/mes</span>
                         </div>
-                        <button 
-                            onClick={handlePayment} 
-                            className="bg-[#EF534F] hover:bg-[#e0403c] text-white px-6 py-2.5 sm:px-8 sm:py-3 rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-red-200 transition-transform transform active:scale-95 whitespace-nowrap"
-                        >
-                            Unirme
-                        </button>
-                     </div>
-                </div>
+                    </div>
 
-                {/* User Groups List */}
-                {groups && groups.length > 0 ? (
-                    groups.map((group) => (
-                    <div key={group.id} className="bg-white rounded-[20px] p-3 sm:p-4 shadow-sm border border-gray-100 flex flex-col sm:flex-row items-center gap-3 sm:gap-4 group hover:border-[#EF534F]/30 hover:shadow-md transition-all">
-                        
-                        {/* User Info */}
-                        <div className="flex items-center gap-3 w-full sm:w-auto">
-                            <div className="relative flex-shrink-0">
-                                {/* Dynamic Gradient Border based on score */}
-                                <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full p-[2px] ${
-                                    (group.admin?.reputation_score || 0) >= 90 ? 'bg-gradient-to-tr from-blue-400 to-cyan-300' :
-                                    (group.admin?.reputation_score || 0) >= 70 ? 'bg-gradient-to-tr from-pink-500 to-purple-400' :
-                                    'bg-gray-100'
-                                }`}>
-                                    <div className="w-full h-full rounded-full bg-white p-0.5 overflow-hidden">
-                                        {group.admin?.avatar_url ? (
-                                            <img src={group.admin.avatar_url} alt={group.admin.full_name} className="w-full h-full object-cover rounded-full" />
-                                        ) : (
-                                            <div className="w-full h-full bg-gray-50 flex items-center justify-center">
-                                                <User className="w-5 h-5 sm:w-6 sm:h-6 text-gray-300" />
-                                            </div>
-                                        )}
-                                    </div>
+                    {/* Right: Info & CTA */}
+                    <div className="flex-1 w-full text-center md:text-left">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 text-[#EF534F] text-xs font-black uppercase tracking-widest mb-3">
+                            <Zap className="w-3 h-3" /> Oficial LowSplit
+                        </div>
+                        <h1 className="text-3xl sm:text-4xl font-black text-gray-900 mb-2 leading-tight">
+                            {service.name}
+                        </h1>
+                        <p className="text-gray-500 text-lg mb-6 leading-relaxed max-w-xl mx-auto md:mx-0">
+                            Suscríbete al servicio oficial gestionado por LowSplit. Sin esperas, sin intermediarios. Garantía total de funcionamiento.
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row items-center gap-4 justify-center md:justify-start">
+                            <div className="text-center sm:text-left">
+                                <div className="text-sm text-gray-400 font-bold uppercase tracking-wider mb-1">Precio Mensual</div>
+                                <div className="text-4xl font-black text-[#EF534F]">
+                                    €{monthlyPrice.toFixed(2)}
                                 </div>
-                                
-                                {/* Score Badge */}
-                                {group.admin?.reputation_score && (
-                                    <div className={`absolute -bottom-1 -right-1 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white ${
-                                        group.admin.reputation_score >= 90 ? 'bg-cyan-500' : 'bg-pink-500'
-                                    }`}>
-                                        {group.admin.reputation_score}
-                                    </div>
-                                )}
                             </div>
                             
-                            <div className="flex-1 min-w-0">
-                                <h3 className="text-sm sm:text-base font-black text-gray-900 flex items-center gap-1.5 truncate">
-                                    {group.admin?.full_name || 'Usuario'}
-                                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${group.invoice_verified ? 'bg-green-500' : 'bg-gray-300'}`}></span>
-                                </h3>
-                                <p className="text-[10px] sm:text-xs text-gray-500 font-medium mt-0.5 truncate">
-                                    comparte <span className="text-gray-900 font-bold">{service.name}</span>
-                                </p>
-                                
-                                {group.invoice_verified && (
-                                    <div className="mt-1.5 inline-flex items-center gap-1 bg-[#00C48C] text-white text-[9px] font-bold px-2 py-0.5 rounded-[4px] uppercase tracking-wide shadow-sm shadow-green-200">
-                                        <Check className="w-2.5 h-2.5" strokeWidth={4} /> Factura OK
-                                    </div>
-                                )}
-                            </div>
+                            <div className="h-10 w-px bg-gray-200 hidden sm:block"></div>
+
+                            <button 
+                                onClick={handlePayment}
+                                className="w-full sm:w-auto px-8 py-4 bg-[#EF534F] hover:bg-[#e0403c] text-white rounded-xl font-bold text-lg shadow-xl shadow-red-200 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+                            >
+                                Unirme Ahora
+                            </button>
                         </div>
-
-                        {/* Spacer */}
-                        <div className="hidden sm:block flex-1"></div>
-
-                        {/* Price & Action */}
-                        <div className="flex items-center justify-between w-full sm:w-auto gap-4 pl-0 sm:pl-8 border-t sm:border-0 border-gray-50 pt-3 sm:pt-0">
-                             <div className="text-right">
-                                <div className="text-xl sm:text-2xl font-black text-gray-900 flex items-center gap-1">
-                                    {group.instant_acceptance && <Zap className="w-4 h-4 text-yellow-400" fill="currentColor" />}
-                                    €{group.price_per_slot.toFixed(2)}
-                                </div>
-                                <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block -mt-1">/mes</span>
-                             </div>
-                             <Link to={`/group/${group.id}`} className="bg-[#111111] hover:bg-black text-white px-6 py-2.5 sm:px-8 sm:py-3 rounded-xl font-bold text-xs sm:text-sm shadow-xl shadow-gray-200 transition-transform transform active:scale-95 whitespace-nowrap">
-                                Únete
-                             </Link>
+                        
+                        <div className="mt-6 flex flex-wrap gap-4 justify-center md:justify-start">
+                           <div className="flex items-center gap-1.5 text-sm text-gray-600 font-medium">
+                                <Check className="w-4 h-4 text-green-500" strokeWidth={3} />
+                                Activación Inmediata
+                           </div>
+                           <div className="flex items-center gap-1.5 text-sm text-gray-600 font-medium">
+                                <Check className="w-4 h-4 text-green-500" strokeWidth={3} />
+                                Soporte 24/7
+                           </div>
+                           <div className="flex items-center gap-1.5 text-sm text-gray-600 font-medium">
+                                <Check className="w-4 h-4 text-green-500" strokeWidth={3} />
+                                Cancelas cuando quieras
+                           </div>
                         </div>
                     </div>
-                ))
-               ) : (
-                <div className="text-center py-12 bg-white rounded-[24px] border border-gray-100 border-dashed">
-                    <p className="text-gray-400 mb-2">No hay grupos disponibles con estos filtros.</p>
-                    <button 
-                        onClick={() => setFilters({ planType: 'all', verified: false, instant: false, sortBy: 'price' })}
-                        className="text-[#EF534F] text-sm font-bold hover:underline"
-                    >
-                        Limpiar filtros
-                    </button>
                 </div>
-               )}
+            </div>
 
+            {/* MARKETPLACE BANNER */}
+            <div className="mt-8">
+                <Link to={`/marketplace/list/${slug}`} className="group block">
+                    <div className="bg-white hover:bg-gray-50 border-2 border-dashed border-gray-200 hover:border-[#EF534F] rounded-[24px] p-6 flex flex-col sm:flex-row items-center justify-between gap-6 transition-all cursor-pointer">
+                        <div className="flex items-center gap-4">
+                            <div className="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-[#EF534F] group-hover:text-white transition-colors">
+                                <Store className="w-7 h-7" />
+                            </div>
+                            <div className="text-center sm:text-left">
+                                <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#EF534F] transition-colors">
+                                    ¿Buscas ofertas de otros usuarios?
+                                </h3>
+                                <p className="text-sm text-gray-500">
+                                    Explora el Marketplace para encontrar precios variados de nuestra comunidad.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                            <span className="inline-flex px-6 py-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl shadow-sm group-hover:bg-[#EF534F] group-hover:text-white group-hover:border-[#EF534F] transition-all">
+                                Ir al Marketplace
+                            </span>
+                        </div>
+                    </div>
+                </Link>
             </div>
-            
+
+            {/* FEATURES GRID */}
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+                {features.map((feature, index) => (
+                    <div key={index} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                        <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center text-[#EF534F] mb-4">
+                            <Zap className="w-5 h-5" />
+                        </div>
+                        <h3 className="font-bold text-gray-900 mb-2">{feature}</h3>
+                        <p className="text-sm text-gray-500">Incluido en tu suscripción oficial de LowSplit.</p>
+                    </div>
+                ))}
             </div>
+
         </div>
       </div>
 

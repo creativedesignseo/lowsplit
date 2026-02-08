@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { Check, ChevronLeft, ShieldCheck, Star, Clock, Calendar, UserCheck, Shield, MessageCircle, Users, MessageSquareText, Smile, Send, User, Plus, Loader2, Wallet, CreditCard, X } from 'lucide-react'
+import { Check, ChevronLeft, ShieldCheck, Star, Clock, Calendar, UserCheck, Shield, MessageCircle, Users, MessageSquareText, Smile, Send, User, Plus, Loader2, Wallet, CreditCard, X, ChevronRight, ThumbsUp, Zap } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import { getLogoUrl, getEmojiForSlug } from '../lib/utils'
+import { getLogoUrl, getEmojiForSlug, calculateSlotPrice } from '../lib/utils'
 import { useWallet } from '../hooks/useWallet'
 import { loadStripe } from '@stripe/stripe-js'
+import ServiceCard from '../components/ServiceCard'
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY)
 
@@ -16,6 +17,14 @@ const GroupDetailPage = () => {
   const [joining, setJoining] = useState(false)
   const [session, setSession] = useState(null)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+
+  // Reviews Mock Data (GamsGo Style)
+  const MOCK_REVIEWS = [
+    { user: 'bud***', service: 'Cuenta de Netflix', comment: '¡Recomendado!', time: '22 minutes ago', rating: 5 },
+    { user: 'gob***', service: 'Suscripción de YouTube', comment: '¡Recomendado!', time: '27 minutes ago', rating: 5 },
+    { user: 'cmi***', service: 'Cuenta de Netflix', comment: '¡Recomendado!', time: '32 minutes ago', rating: 5 },
+    { user: 'Ale***', service: 'Cuenta Disney Plus', comment: '¡Recomendado!', time: '1 hour ago', rating: 5 },
+  ]
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -36,8 +45,10 @@ const GroupDetailPage = () => {
             services (
                 name,
                 slug,
+                description,
                 max_slots,
-                icon_url
+                icon_url,
+                total_price
             ),
             profiles!admin_id (
                 username,
@@ -54,26 +65,15 @@ const GroupDetailPage = () => {
     }
   })
 
-  // Fetch Members
-  const { data: members } = useQuery({
-    queryKey: ['group-members', id],
+  // Mock related services fetch or reuse from ExplorePage logic (simplified)
+  const { data: relatedServices } = useQuery({
+    queryKey: ['related-services'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('memberships')
-        .select(`
-            id,
-            joined_at,
-            payment_status,
-            profiles!user_id (
-                username,
-                avatar_url
-            )
-        `)
-        .eq('group_id', id)
-        .eq('payment_status', 'paid')
-      
-      if (error) throw error
-      return data
+        const { data } = await supabase
+            .from('services')
+            .select('*')
+            .limit(4)
+        return data || []
     }
   })
 
@@ -97,15 +97,13 @@ const GroupDetailPage = () => {
   const service = group.services
   const admin = group.profiles
   const logoUrl = getLogoUrl(service?.slug, service?.icon_url)
-  const availableSlots = (service?.max_slots || 4) - (group.slots_occupied || 1)
   const username = admin?.username || 'Usuario'
-  const memberSince = new Date(admin?.created_at).toLocaleDateString()
   
-  // Calculate pricing (mock logic or from DB)
+  // Calculate pricing
   const price = group.price_per_slot || 0
-  const total = price + 0.35 // Service fee example
-
-  // Payment button handler - shows modal if user has balance, otherwise direct to Stripe
+  const total = price + 0.35 // Service fee
+  
+  // Handlers
   const handlePaymentClick = () => {
     if (!session) {
       navigate('/login', { state: { from: `/group/${id}` } })
@@ -114,16 +112,13 @@ const GroupDetailPage = () => {
     setShowPaymentModal(true)
   }
 
-  // Pay with wallet only (full amount)
   const handlePayWithWallet = async () => {
     if (balance < total) {
       alert(`Saldo insuficiente. Tu saldo es €${balance.toFixed(2)} y el total es €${total.toFixed(2)}.`)
       return
     }
-
     setJoining(true)
     setShowPaymentModal(false)
-    
     try {
       const { error: rpcError } = await supabase.rpc('handle_join_group_wallet', {
         p_user_id: session.user.id,
@@ -131,16 +126,13 @@ const GroupDetailPage = () => {
         p_amount: total,
         p_description: `Acceso a ${service.name}`
       })
-
       if (rpcError) throw rpcError
-
       await supabase.from('notifications').insert({
         user_id: session.user.id,
         title: '¡Bienvenido al grupo!',
         message: `Te has unido exitosamente a ${service.name}. Ya puedes ver tus credenciales en el dashboard.`,
         type: 'success'
       })
-
       alert('¡Te has unido al grupo con éxito!')
       navigate('/dashboard?tab=purchases')
     } catch (err) {
@@ -151,11 +143,9 @@ const GroupDetailPage = () => {
     }
   }
 
-  // Pay with card (Stripe checkout for full amount)
   const handlePayWithCard = async () => {
     setJoining(true)
     setShowPaymentModal(false)
-    
     try {
       const response = await fetch('/.netlify/functions/create-group-checkout', {
         method: 'POST',
@@ -167,10 +157,8 @@ const GroupDetailPage = () => {
           serviceName: service.name
         })
       })
-
       const { sessionId, error } = await response.json()
       if (error) throw new Error(error)
-
       const stripe = await stripePromise
       await stripe.redirectToCheckout({ sessionId })
     } catch (err) {
@@ -181,16 +169,12 @@ const GroupDetailPage = () => {
     }
   }
 
-  // Hybrid: Use wallet balance + card for remainder
   const handlePayHybrid = async () => {
     const walletAmount = Math.min(balance, total)
     const cardAmount = total - walletAmount
-
     setJoining(true)
     setShowPaymentModal(false)
-
     try {
-      // First, deduct from wallet
       if (walletAmount > 0) {
         const { error: walletError } = await supabase.rpc('handle_partial_wallet_payment', {
           p_user_id: session.user.id,
@@ -199,24 +183,20 @@ const GroupDetailPage = () => {
         })
         if (walletError) throw walletError
       }
-
-      // Then, redirect to Stripe for the rest
       if (cardAmount > 0) {
         const response = await fetch('/.netlify/functions/create-group-checkout', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            groupId: id,
-            userId: session.user.id,
-            amount: cardAmount,
-            serviceName: service.name,
-            walletDeducted: walletAmount
-          })
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                groupId: id,
+                userId: session.user.id,
+                amount: cardAmount,
+                serviceName: service.name,
+                walletDeducted: walletAmount
+            })
         })
-
         const { sessionId, error } = await response.json()
         if (error) throw new Error(error)
-
         const stripe = await stripePromise
         await stripe.redirectToCheckout({ sessionId })
       }
@@ -231,387 +211,311 @@ const GroupDetailPage = () => {
   return (
     <>
       <Helmet>
-        <title>Grupo de {service.name} - LowSplit</title>
+        <title>{service.name} - Oferta de {username} | LowSplit</title>
       </Helmet>
 
-      <div className="min-h-screen bg-[#f8f9fc] pt-[80px] pb-12">
-        <div className="max-w-[1100px] mx-auto px-4">
-            
-            {/* Back Nav */}
-            <div className="mb-6">
-                <button 
-                  onClick={() => navigate(-1)} 
-                  className="inline-flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors"
-                >
-                    <ChevronLeft className="w-4 h-4" />
-                    Volver
-                </button>
-            </div>
+      <div className="min-h-screen bg-[#FAFAFA] pt-[80px] pb-12 font-sans">
+        
+        {/* Navigation Breadcrumb */}
+        <div className="max-w-[1240px] mx-auto px-4 mb-6">
+            <Link to={`/marketplace/list/${service.slug}`} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 font-medium">
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Volver a todas las ofertas
+            </Link>
+        </div>
 
-            {/* Main Layout: 2 Columns */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-
-                {/* LEFT COLUMN: Admin Info (4 cols) */}
-                <div className="lg:col-span-4 space-y-4">
-                    
-                    {/* Admin Profile Card */}
-                    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden">
-                        
-                        {/* Service Background Accent */}
-                        <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-br from-indigo-50 to-blue-50 z-0"></div>
-
-                        <div className="relative z-10 flex flex-col items-center">
-                            {/* Avatar with Service Badge */}
-                            <div className="relative mb-3">
-                                <div className="w-24 h-24 rounded-full border-4 border-white shadow-md bg-gray-200 flex items-center justify-center overflow-hidden">
-                                     {admin?.avatar_url ? (
-                                        <img src={admin.avatar_url} alt={username} className="w-full h-full object-cover" />
-                                     ) : (
-                                        <span className="text-3xl text-gray-400 font-bold">{username.charAt(0).toUpperCase()}</span>
-                                     )}
-                                </div>
-                                <div className="absolute bottom-0 right-0 w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white border-2 border-white shadow-sm" title="Admin Verificado">
-                                    <ShieldCheck className="w-4 h-4" />
-                                </div>
-                            </div>
-
-                            {/* Name & Role */}
-                            <h2 className="text-xl font-bold text-gray-900">{username}</h2>
-                            <p className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full mt-1 uppercase tracking-wide">
-                                Admin del Grupo
-                            </p>
-
-                            {/* Trust Score */}
-                            <div className="mt-4 w-full bg-gray-50 rounded-xl p-3 border border-gray-100">
-                                <div className="flex justify-between items-center mb-1">
-                                    <span className="text-xs font-bold text-gray-500">Nivel de Confianza</span>
-                                    <div className="flex items-center gap-1 text-yellow-500 text-xs font-bold">
-                                        <Star className="w-3 h-3 fill-current" />
-                                        {((admin?.reputation_score || 80) / 20).toFixed(1)}/5.0
-                                    </div>
-                                </div>
-                                <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
-                                    <div className="bg-yellow-400 h-full rounded-full" style={{ width: `${admin?.reputation_score || 80}%` }}></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Verifications List */}
-                        <div className="mt-6 space-y-3">
-                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Verificaciones</h3>
-                            <div className="grid grid-cols-3 gap-2 text-center">
-                                <div className="flex flex-col items-center gap-1 p-2 bg-green-50 rounded-xl border border-green-100">
-                                    <UserCheck className="w-5 h-5 text-green-600" />
-                                    <span className="text-[10px] font-medium text-green-700">Identidad</span>
-                                </div>
-                                <div className="flex flex-col items-center gap-1 p-2 bg-green-50 rounded-xl border border-green-100">
-                                    <Shield className="w-5 h-5 text-green-600" />
-                                    <span className="text-[10px] font-medium text-green-700">Pago</span>
-                                </div>
-                                <div className="flex flex-col items-center gap-1 p-2 bg-blue-50 rounded-xl border border-blue-100">
-                                    <MessageCircle className="w-5 h-5 text-blue-600" />
-                                    <span className="text-[10px] font-medium text-blue-700">Teléfono</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Admin Stats */}
-                        <div className="mt-6 pt-6 border-t border-gray-100 space-y-3">
-                            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Actividad</h3>
-                            <div className="flex items-center justify-between text-sm">
-                                <span className="text-gray-500 flex items-center gap-2"><Clock className="w-4 h-4" /> Tiempo resp.</span>
-                                <span className="font-medium text-blue-600">~ 2 horas</span>
-                            </div>
-                             <div className="flex items-center justify-between text-sm">
-                                <span className="text-gray-500 flex items-center gap-2"><Calendar className="w-4 h-4" /> Miembro desde</span>
-                                <span className="font-medium text-gray-900">{memberSince}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                {/* RIGHT COLUMN: Contract/Subscription (8 cols) */}
-                <div className="lg:col-span-8">
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
-                        
-                        {/* Header: Service + Slots */}
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                            <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 bg-white border border-gray-100 rounded-xl p-2 shadow-sm flex items-center justify-center">
-                                     {logoUrl ? <img src={logoUrl} alt={service.name} className="w-full h-full object-contain" /> : <span className="text-3xl">{getEmojiForSlug(service.slug)}</span>}
-                                </div>
-                                <div>
-                                    <h1 className="text-2xl font-bold text-gray-900">{service.name} Family</h1>
-                                    <p className="text-gray-500 text-sm">Compartido por {username}</p>
-                                </div>
-                            </div>
-                            <div className="flex flex-col items-end">
-                                <div className="text-3xl font-black text-gray-900">
-                                    {availableSlots}<span className="text-lg text-gray-400 font-medium">/{service.max_slots}</span>
-                                </div>
-                                <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-xl">PUESTOS LIBRES</span>
-                            </div>
-                        </div>
-
-                        {/* Contract Details Table */}
-                        <div className="grid grid-cols-2 gap-y-6 gap-x-4 mb-8">
-                             <div>
-                                <span className="text-xs text-gray-400 font-bold uppercase block mb-1">Periodo de facturación</span>
-                                <span className="text-indigo-600 font-medium bg-indigo-50 px-3 py-1 rounded-full text-sm">Mensual</span>
-                             </div>
-                             <div>
-                                <span className="text-xs text-gray-400 font-bold uppercase block mb-1">Tipo de suscripción</span>
-                                <span className="text-purple-600 font-medium bg-purple-50 px-3 py-1 rounded-full text-sm">Premium 4K</span>
-                             </div>
-                             <div>
-                                <span className="text-xs text-gray-400 font-bold uppercase block mb-1">Renovación</span>
-                                <span className="text-gray-900 font-medium text-sm">Automática</span>
-                             </div>
-                             <div>
-                                <span className="text-xs text-gray-400 font-bold uppercase block mb-1">Método de entrega</span>
-                                <span className="text-gray-900 font-medium text-sm">Credenciales (Email/Pass)</span>
-                             </div>
-                        </div>
-
-                        <div className="border-t border-dashed border-gray-200 my-8"></div>
-
-                        {/* Price & Action */}
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-                            <div>
-                                <p className="text-sm text-gray-500 mb-1">Total a pagar ahora:</p>
-                                <div className="flex items-baseline gap-1">
-                                    <span className="text-4xl font-black text-[#EF534F]">${total.toFixed(2)}</span>
-                                    <span className="text-gray-400 font-medium">/ mes</span>
-                                </div>
-                                <p className="text-xs text-gray-400 mt-1">* Incluye protección al comprador</p>
-                            </div>
-
-                             <button 
-                                onClick={handlePaymentClick}
-                                disabled={joining || availableSlots === 0}
-                                className="w-full sm:w-auto px-8 py-4 bg-[#EF534F] hover:bg-[#e0403c] text-white font-bold rounded-xl shadow-lg shadow-red-200 transition-all transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
-                            >
-                                {joining ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <>
-                                        <UserCheck className="w-5 h-5" />
-                                        Unirme al Grupo
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                         
-                         <div className="mt-6 text-center">
-                            <a href="#" className="text-xs text-indigo-500 font-medium hover:underline flex items-center justify-center gap-1">
-                                <MessageCircle className="w-3 h-3" />
-                                ¿Tienes dudas? Contactar al admin
-                            </a>
-                         </div>
-
-                    </div>
-                </div>
-
-            </div>
-
-            {/* BOTTOM SECTION: Hub Features */}
-            <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+        <div className="max-w-[1240px] mx-auto px-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
-                {/* Members List (Left 3 cols) */}
-                <div className="lg:col-span-3">
-                    <div className="bg-white rounded-[24px] p-6 shadow-sm border border-gray-100 min-h-[400px]">
-                         <h3 className="text-sm font-black text-gray-900 mb-6 flex items-center gap-2 uppercase tracking-widest">
-                            <Users className="w-4 h-4 text-gray-400" />
-                            Miembros
-                         </h3>
-                         <div className="space-y-5">
-                             {/* Admin */}
-                             <div className="flex items-center gap-3">
-                                 <div className="relative">
-                                     <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center overflow-hidden border border-indigo-100">
-                                         {admin?.avatar_url ? <img src={admin.avatar_url} className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-indigo-400" />}
-                                     </div>
-                                     <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-indigo-500 rounded-full border-2 border-white flex items-center justify-center shadow-sm">
-                                         <Check className="w-2.5 h-2.5 text-white" strokeWidth={4} />
-                                     </div>
-                                 </div>
-                                 <div>
-                                     <p className="text-sm font-bold text-gray-900 leading-tight">{username}</p>
-                                     <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Admin</p>
-                                 </div>
+                {/* LEFT COLUMN (Main Content) */}
+                <div className="lg:col-span-8 space-y-6">
+                    
+                    {/* 1. SERVICE DETAILS CARD */}
+                    <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 p-6 sm:p-8 relative overflow-hidden">
+                        <div className="flex flex-col sm:flex-row gap-6">
+                             {/* Product Image */}
+                             <div className="w-full sm:w-[280px] h-[160px] sm:h-[180px] bg-gray-900 rounded-lg flex items-center justify-center relative overflow-hidden flex-shrink-0 group">
+                                {logoUrl ? (
+                                    <img src={logoUrl} className="w-full h-full object-contain p-8 z-10 transition-transform group-hover:scale-105" alt={service.name} />
+                                ) : (
+                                    <span className="text-6xl z-10">{getEmojiForSlug(service.slug)}</span>
+                                )}
+                                {/* Background gradient effect */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-0"></div>
+                                <div className="absolute bottom-3 left-3 z-10">
+                                    <span className="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                                        4K UltraHD
+                                    </span>
+                                </div>
                              </div>
-                             
-                             {/* Other Members */}
-                             {members?.map(m => (
-                                <div key={m.id} className="flex items-center gap-3 animate-in fade-in slide-in-from-left duration-300">
-                                    <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center overflow-hidden border border-gray-100">
-                                         {m.profiles?.avatar_url ? <img src={m.profiles.avatar_url} className="w-full h-full object-cover" /> : <User className="w-5 h-5 text-gray-400" />}
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-gray-700 leading-tight">{m.profiles?.username || 'Miembro'}</p>
-                                        <p className="text-[10px] text-gray-400 font-medium">Desde {new Date(m.joined_at).toLocaleDateString('es-ES', { month: 'short', year: 'numeric' })}</p>
-                                    </div>
-                                </div>
-                             ))}
 
-                             {/* Empty Slots Placeholder */}
-                             {[...Array(availableSlots)].map((_, i) => (
-                                <div key={i} className="flex items-center gap-3 opacity-30 cursor-help" title="¡Este puesto puedes ser tú!">
-                                    <div className="w-10 h-10 rounded-full bg-gray-50 border-2 border-dashed border-gray-300 flex items-center justify-center">
-                                         <Plus className="w-4 h-4 text-gray-400" />
-                                    </div>
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Puesto Libre</span>
+                             {/* Product Info */}
+                             <div className="flex-1">
+                                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight mb-2">
+                                    {service.name} - Premium Compartido
+                                </h1>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Check className="w-5 h-5 text-green-500 bg-green-50 rounded-full p-0.5" />
+                                    <span className="text-lg font-medium text-gray-700">Cuenta estable - Visualización 4K</span>
                                 </div>
-                             ))}
-                         </div>
+
+                                <div className="grid grid-cols-2 gap-y-3 gap-x-8 text-sm text-gray-600">
+                                    <div className="flex items-start gap-2">
+                                        <Check className="w-4 h-4 text-green-500 mt-0.5" />
+                                        <div>
+                                            <span className="block text-gray-400 text-xs">Región</span>
+                                            <span className="font-medium text-gray-800">Global / España</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <Users className="w-4 h-4 text-gray-400 mt-0.5" />
+                                        <div>
+                                            <span className="block text-gray-400 text-xs">Método</span>
+                                            <span className="font-medium text-gray-800">Perfil compartido</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <Zap className="w-4 h-4 text-gray-400 mt-0.5" />
+                                        <div>
+                                            <span className="block text-gray-400 text-xs">Dispositivos</span>
+                                            <span className="font-medium text-gray-800">TV, PC, Móvil</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <Clock className="w-4 h-4 text-gray-400 mt-0.5" />
+                                        <div>
+                                            <span className="block text-gray-400 text-xs">Duración</span>
+                                            <span className="font-medium text-gray-800">1 Mes (Renovable)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                             </div>
+                        </div>
+
+                        {/* Notice Box */}
+                         <div className="mt-6 bg-blue-50/50 border border-blue-100 rounded-lg p-4 flex gap-3">
+                            <div className="flex-shrink-0 mt-0.5">
+                                <ShieldCheck className="w-5 h-5 text-blue-500" />
+                            </div>
+                            <div>
+                                <h4 className="text-sm font-bold text-blue-800 mb-1">Aviso importante</h4>
+                                <p className="text-xs text-blue-700/80 leading-relaxed">
+                                    Este grupo es gestionado por un usuario verificado de la comunidad ({username}). 
+                                    LowSplit actúa como intermediario seguro, reteniendo el pago hasta que confirmes el acceso correcto.
+                                </p>
+                            </div>
+                        </div>
                     </div>
+
+                    {/* 3. DESCRIPTION CARD */}
+                    <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 p-6">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            Descripción de la oferta
+                        </h3>
+                        <div className="prose prose-sm prose-gray max-w-none text-gray-600">
+                             <p>
+                                {service.description || `Únete a este grupo familiar de ${service.name} para disfrutar de todas las ventajas Premium. 
+                                Cuenta compartida gestionada profesionalmente para garantizar estabilidad y privacidad en tu perfil.`}
+                             </p>
+                             <ul className="mt-4 space-y-2 list-none p-0">
+                                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Garantía de funcionamiento durante todo el periodo.</li>
+                                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Soporte directo con el administrador del grupo.</li>
+                                <li className="flex items-center gap-2"><Check className="w-4 h-4 text-green-500" /> Renovación automática disponible si hay saldo.</li>
+                             </ul>
+                             <p className="mt-4 text-xs text-gray-400 italic">
+                                Traducido automáticamente por LowSplit
+                             </p>
+                        </div>
+                    </div>
+
                 </div>
 
-            {/* Interaction/Chat Area (Right 9 cols) */}
-                <div className="lg:col-span-9">
-                     <div className="bg-white rounded-[24px] shadow-sm border border-gray-100 flex flex-col min-h-[400px] lg:min-h-[500px] relative overflow-hidden">
-                         
-                         {/* Chat Empty State (Reference style) */}
-                         <div className="flex-1 flex flex-col items-center justify-center p-8 lg:p-12 text-center">
-                            <div className="w-32 h-32 lg:w-40 lg:h-40 bg-gray-50 rounded-full flex items-center justify-center mb-6 lg:mb-8 relative">
-                                <MessageSquareText className="w-12 h-12 lg:w-16 lg:h-16 text-gray-200" />
-                                <div className="absolute -top-2 -right-2 w-8 h-8 lg:w-10 lg:h-10 bg-[#EF534F]/10 rounded-full flex items-center justify-center">
-                                    <Smile className="w-4 h-4 lg:w-5 lg:h-5 text-[#EF534F]" />
+                {/* RIGHT COLUMN (Sidebar) */}
+                <div className="lg:col-span-4 space-y-6">
+                    
+                    {/* 2. PRICE & PURCHASE CARD */}
+                    <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 p-6 sticky top-24">
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center text-sm border-b border-gray-50 pb-3">
+                                <span className="text-gray-500">Entrega garantizada</span>
+                                <span className="font-bold text-gray-900 flex items-center gap-1">
+                                    <Clock className="w-4 h-4 text-gray-400" /> 20 minutos
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm border-b border-gray-50 pb-3">
+                                <span className="text-gray-500">Tiempo medio</span>
+                                <span className="font-medium text-green-600 flex items-center gap-1">
+                                    <Zap className="w-4 h-4" /> ~5 min
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm pb-1">
+                                <span className="text-gray-500">Garantía</span>
+                                <span className="font-bold text-gray-900 flex items-center gap-1">
+                                    <ShieldCheck className="w-4 h-4 text-gray-400" /> 30 días
+                                </span>
+                            </div>
+
+                            <div className="pt-4 pb-2">
+                                <div className="flex justify-between items-end mb-4">
+                                    <span className="text-lg font-bold text-gray-900">Total:</span>
+                                    <span className="text-4xl font-black text-[#EF534F]">€{total.toFixed(2)}</span>
+                                </div>
+                                
+                                <button 
+                                    onClick={handlePaymentClick}
+                                    disabled={joining}
+                                    className="w-full bg-[#EF534F] hover:bg-[#d64541] text-white font-bold py-3.5 rounded-full shadow-lg shadow-red-100 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    {joining ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Comprar ahora'}
+                                </button>
+                            </div>
+
+                            <div className="pt-2 space-y-2">
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <ShieldCheck className="w-4 h-4 text-blue-500" />
+                                    <span>Garantía de reembolso de 10 días</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <Zap className="w-4 h-4 text-yellow-500" />
+                                    <span>Opciones de pago rápido y seguro</span>
                                 </div>
                             </div>
-                            <h3 className="text-xl lg:text-2xl font-black text-gray-900 mb-2">Muro del Grupo</h3>
-                            <p className="text-gray-500 max-w-[340px] text-sm leading-relaxed">
-                                Este es vuestro espacio privado para comentar fallos, renovaciones o simplemente saludar.
-                            </p>
-                         </div>
+                        </div>
+                    </div>
 
-                         {/* Chat Footer */}
-                         <div className="p-4 lg:p-6 bg-gray-50/50 border-t border-gray-100">
-                             <div className="flex items-center gap-4 bg-white border border-gray-200 rounded-[20px] p-2 pl-4 lg:pl-5 focus-within:border-indigo-300 focus-within:ring-8 focus-within:ring-indigo-50 transition-all shadow-sm">
-                                 <Smile className="w-6 h-6 text-gray-300 hover:text-gray-500 cursor-pointer hidden sm:block" />
-                                 <input 
-                                    type="text" 
-                                    placeholder="Escribe un mensaje..."
-                                    className="flex-1 bg-transparent border-none focus:ring-0 text-gray-800 placeholder:text-gray-300 font-medium py-3 text-sm lg:text-base"
-                                 />
-                                 <button className="bg-[#1a1a1a] text-white p-3 lg:p-3.5 rounded-2xl hover:bg-black transition-all transform active:scale-90 flex items-center justify-center">
-                                    <Send className="w-4 h-4 lg:w-5 lg:h-5" />
-                                 </button>
-                             </div>
-                         </div>
-                     </div>
+                    {/* 4. VENDOR & REVIEWS CARD */}
+                    <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 p-6">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-12 h-12 rounded-full border border-gray-200 overflow-hidden bg-gray-50">
+                                {admin?.avatar_url ? (
+                                    <img src={admin.avatar_url} alt={username} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-gray-400 text-lg font-bold">
+                                        {username.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-1">
+                                    <span className="font-bold text-gray-900">{username}</span>
+                                    <Check className="w-3.5 h-3.5 text-white bg-green-500 rounded-full p-0.5" />
+                                </div>
+                                <div className="flex items-center gap-1.5 text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded-full mt-1 w-fit">
+                                    <ThumbsUp className="w-3 h-3 fill-current" />
+                                    99.04% ({admin?.reputation_score || 100} votos)
+                                </div>
+                            </div>
+                        </div>
+
+                        <h4 className="font-bold text-gray-900 mb-4 text-sm">Comentarios recientes</h4>
+                        
+                        <div className="space-y-4">
+                            {MOCK_REVIEWS.map((review, i) => (
+                                <div key={i} className="pb-4 border-b border-gray-50 last:border-0 last:pb-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <ThumbsUp className="w-3.5 h-3.5 text-blue-500 fill-current" />
+                                        <span className="font-bold text-sm text-gray-800">{review.user}</span>
+                                        <span className="text-gray-300">|</span>
+                                        <span className="text-xs text-gray-500 truncate max-w-[120px]">{review.service}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-700 font-medium mb-1">
+                                        {review.comment}
+                                    </p>
+                                    <span className="text-xs text-gray-400">{review.time}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        <button className="w-full mt-4 text-center text-sm font-bold text-gray-900 hover:underline">
+                            Todos los comentarios
+                        </button>
+                    </div>
+
                 </div>
 
             </div>
+
+            {/* 5. EXPLORE MORE SECTION */}
+            <div className="mt-12 mb-8">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-gray-900">Explorar más</h3>
+                    <div className="flex gap-2">
+                        <button className="w-8 h-8 rounded border border-gray-200 flex items-center justify-center hover:bg-gray-50 text-gray-400 transition-colors">
+                             <ChevronLeft className="w-5 h-5" />
+                        </button>
+                         <button className="w-8 h-8 rounded border border-gray-200 flex items-center justify-center hover:bg-gray-50 text-gray-400 transition-colors">
+                             <ChevronRight className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {relatedServices && relatedServices.map((svc) => (
+                        <div key={svc.id} className="h-full"> 
+                            {/* Reusing ServiceCard but constraining height */}
+                            <ServiceCard service={svc} />
+                        </div>
+                    ))}
+                </div>
+            </div>
+
         </div>
       </div>
 
-      {/* Payment Method Modal */}
+      {/* Payment Modal (Preserved Logic) */}
       {showPaymentModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 font-sans">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
             {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 p-6 text-white">
+            <div className="bg-[#EF534F] p-6 text-white">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="text-xl font-bold">Método de Pago</h3>
-                  <p className="text-white/80 text-sm mt-1">Elige cómo pagar €{total.toFixed(2)}</p>
+                  <h3 className="text-xl font-bold">Completar Compra</h3>
+                  <p className="text-white/90 text-sm mt-1">Total a pagar: €{total.toFixed(2)}</p>
                 </div>
-                <button 
-                  onClick={() => setShowPaymentModal(false)}
-                  className="text-white/80 hover:text-white transition-colors"
-                >
+                <button onClick={() => setShowPaymentModal(false)} className="text-white/80 hover:text-white">
                   <X className="w-6 h-6" />
                 </button>
               </div>
             </div>
 
-            {/* Balance Display */}
-            <div className="p-6 border-b border-gray-100">
-              <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <Wallet className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Tu saldo</p>
-                    <p className="text-lg font-bold text-gray-900">€{balance.toFixed(2)}</p>
-                  </div>
-                </div>
-                {balance >= total && (
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
-                    Saldo suficiente
-                  </span>
-                )}
-              </div>
-            </div>
+            <div className="p-6 space-y-4">
+               {/* Balance Info */}
+               <div className="bg-gray-50 p-4 rounded-xl flex justify-between items-center">
+                   <div className="flex items-center gap-3">
+                       <Wallet className="text-gray-400 w-5 h-5" />
+                       <span className="text-gray-600 text-sm">Tu saldo</span>
+                   </div>
+                   <span className="font-bold text-gray-900">€{balance.toFixed(2)}</span>
+               </div>
 
-            {/* Payment Options */}
-            <div className="p-6 space-y-3">
-              {/* Option 1: Pay with Wallet (if sufficient balance) */}
-              {balance >= total && (
-                <button
-                  onClick={handlePayWithWallet}
-                  disabled={joining}
-                  className="w-full p-4 border-2 border-green-500 bg-green-50 rounded-xl hover:bg-green-100 transition-all flex items-center gap-4"
+               {balance >= total && (
+                <button 
+                    onClick={handlePayWithWallet} disabled={joining}
+                    className="w-full text-left p-4 border rounded-xl hover:border-green-500 hover:bg-green-50 transition-all group"
                 >
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                    <Wallet className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-bold text-gray-900">Pagar con Billetera</p>
-                    <p className="text-sm text-gray-500">Usar €{total.toFixed(2)} de tu saldo</p>
-                  </div>
-                  <span className="text-green-600 font-bold">Recomendado</span>
+                    <div className="flex justify-between mb-1">
+                        <span className="font-bold text-gray-900 group-hover:text-green-700">Pagar con Saldo</span>
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">Recomendado</span>
+                    </div>
+                    <p className="text-xs text-gray-500">Descontar del saldo disponible</p>
                 </button>
-              )}
+               )}
 
-              {/* Option 2: Hybrid Payment (if partial balance) */}
-              {balance > 0 && balance < total && (
-                <button
-                  onClick={handlePayHybrid}
-                  disabled={joining}
-                  className="w-full p-4 border-2 border-indigo-500 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-all flex items-center gap-4"
+               <button 
+                    onClick={handlePayWithCard} disabled={joining}
+                    className="w-full text-left p-4 border rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all"
                 >
-                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-indigo-500 rounded-full flex items-center justify-center">
-                    <Wallet className="w-6 h-6 text-white" />
-                  </div>
-                  <div className="flex-1 text-left">
-                    <p className="font-bold text-gray-900">Billetera + Tarjeta</p>
-                    <p className="text-sm text-gray-500">
-                      €{balance.toFixed(2)} saldo + €{(total - balance).toFixed(2)} tarjeta
-                    </p>
-                  </div>
-                  <span className="text-indigo-600 font-bold">Recomendado</span>
+                    <div className="flex justify-between mb-1">
+                        <span className="font-bold text-gray-900">Tarjeta de Crédito / Débito</span>
+                    </div>
+                    <p className="text-xs text-gray-500">Procesado seguro por Stripe</p>
                 </button>
-              )}
-
-              {/* Option 3: Pay with Card */}
-              <button
-                onClick={handlePayWithCard}
-                disabled={joining}
-                className="w-full p-4 border-2 border-gray-200 bg-white rounded-xl hover:bg-gray-50 transition-all flex items-center gap-4"
-              >
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
-                  <CreditCard className="w-6 h-6 text-gray-600" />
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="font-bold text-gray-900">Pagar con Tarjeta</p>
-                  <p className="text-sm text-gray-500">Pago completo €{total.toFixed(2)}</p>
-                </div>
-              </button>
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 pb-6">
-              <p className="text-xs text-gray-400 text-center">
-                🔒 Pago seguro procesado por Stripe
-              </p>
             </div>
           </div>
         </div>
       )}
+
     </>
   )
 }
