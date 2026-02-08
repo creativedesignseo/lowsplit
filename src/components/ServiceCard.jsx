@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { getEmojiForSlug, calculateSlotPrice, getLogoUrl, getDefaultFeatures } from '../lib/utils'
 
-const ServiceCard = ({ service }) => {
+const ServiceCard = ({ service, customLink }) => {
   const [expanded, setExpanded] = useState(false)
   const [recentData, setRecentData] = useState({ buyer: 'user123', time: 5 })
   
@@ -22,10 +22,12 @@ const ServiceCard = ({ service }) => {
   const features = service.features || getDefaultFeatures(service.category)
 
   const logoUrl = getLogoUrl(service.slug, service.icon_url, 'full')
+  
+  const destination = customLink || `/service/${service.slug}`
 
   return (
     <div className="spu-card-wrapper w-full h-full">
-      <Link to={`/service/${service.slug}`} className="block h-full draggable-false group">
+      <Link to={destination} className="block h-full draggable-false group">
         <div className="flex flex-col h-full rounded-[20px] overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-[#fdf2f2]">
             
             {/* 1. TOP & MIDDLE WRAPPER (White Logo + Red Price) */}

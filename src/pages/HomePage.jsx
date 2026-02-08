@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import ServiceCard from '../components/ServiceCard'
@@ -19,7 +19,8 @@ import {
   Shield,
   BadgeCheck,
   CreditCard,
-  Loader2
+  Loader2,
+  Users
 } from 'lucide-react'
 
 // Categorías
@@ -32,6 +33,7 @@ const categories = [
   { id: 'gaming', name: 'Gaming', icon: Monitor },
   { id: 'education', name: 'Education', icon: GraduationCap },
   { id: 'bundle', name: 'Bundle', icon: Sparkles },
+  { id: 'marketplace', name: 'Marketplace', icon: Users },
 ]
 
 // Beneficios
@@ -58,8 +60,19 @@ const BenefitCard = ({ title, description, icon: Icon }) => (
 )
 
 const HomePage = () => {
-  const [activeCategory, setActiveCategory] = useState('todo')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const activeCategory = searchParams.get('category_id') || 'todo'
   
+  // Handler for category change
+  const handleCategoryChange = (categoryId) => {
+    if (categoryId === 'todo') {
+       searchParams.delete('category_id')
+       setSearchParams(searchParams)
+    } else {
+       setSearchParams({ category_id: categoryId })
+    }
+  }
+
   // Fetch services from Supabase
   const { data: services = [], isLoading, error } = useQuery({
     queryKey: ['services'],
@@ -78,10 +91,19 @@ const HomePage = () => {
   const filteredServices = services.filter(service => {
     if (activeCategory === 'todo') return true
     
+    // Marketplace logic: Currently showing all or could filter by specific criteria
+    // For now, if 'marketplace' is selected, we might want to show everything or a dedicated list.
+    // Given the user request "marketplace donde deberian de estar las que ofrecen los usuario", 
+    // we ideally would filter for "user generated" services/groups.
+    // As a placeholder for "Marketplace", we'll just return true or filter by a 'marketplace' category if it existed.
+    // Let's assume for now it filters nothing (behaves like 'todo') or we can refine logic later.
+    if (activeCategory === 'marketplace') return true 
+
     // Simple category matching
     // Note: Database uses 'streaming', 'music', etc.
     // Ensure categories array IDs match DB values or map them
     // 'svod' in UI map to 'streaming' in DB?
+    // Note: The UI category ID for 'streaming' is 'streaming' in the categories array above, but label is SVOD.
     if (activeCategory === 'svod' && service.category === 'streaming') return true
     if (activeCategory === 'software' && service.category === 'productivity') return true
     if (activeCategory === 'learning' && service.category === 'education') return true
@@ -97,9 +119,9 @@ const HomePage = () => {
       </Helmet>
 
       {/* Hero Section */}
-      <section style={{ background: '#EF534F' }} className="pt-0">
-        <div className="max-w-[1440px] mx-auto px-4 py-12">
-          <div className="flex flex-col items-center gap-2 max-w-[1000px] mx-auto text-center mb-8">
+      <section style={{ background: '#EF534F' }} className="pt-24 pb-6">
+        <div className="max-w-[1440px] mx-auto px-4">
+          <div className="flex flex-col items-center gap-2 max-w-[1000px] mx-auto text-center">
             <h1 className="text-white font-medium text-2xl sm:text-3xl lg:text-[32px]">
               Comparta la suscripción premium más barato en LowSplit
             </h1>
@@ -107,18 +129,23 @@ const HomePage = () => {
               Proporcionando streaming asequible y de alta calidad durante 6 años
             </p>
           </div>
-          
-          {/* Categories */}
-          <div className="flex justify-center items-center gap-3 sm:gap-4 flex-wrap max-w-[1000px] mx-auto">
+        </div>
+      </section>
+      
+      {/* Categories - Sticky Bar */}
+      <div className="sticky top-[64px] z-40 pb-4 pt-2 shadow-sm transition-all" style={{ background: '#EF534F' }}>
+        <div className="max-w-[1440px] mx-auto px-4">
+          <div className="w-full overflow-x-auto scrollbar-hide">
+            <div className="flex gap-3 sm:gap-4 md:justify-center min-w-max px-2">
             {categories.map((cat) => {
               const IconComponent = cat.icon
               const isActive = activeCategory === cat.id
               return (
                 <button
                   key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`w-[80px] sm:w-[100px] h-[60px] sm:h-[66px] rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer transition-all
-                    ${isActive ? 'bg-white scale-105' : 'bg-white/10 hover:bg-white/20'}`}
+                  onClick={() => handleCategoryChange(cat.id)}
+                  className={`w-[80px] sm:w-[100px] h-[60px] sm:h-[66px] rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer transition-all flex-shrink-0
+                    ${isActive ? 'bg-white scale-105 shadow-lg' : 'bg-white/10 hover:bg-white/20'}`}
                 >
                   <IconComponent className={`w-6 h-6 sm:w-8 sm:h-8 ${isActive ? 'text-[#EF534F]' : 'text-white'}`} />
                   <span className={`text-[10px] sm:text-xs font-extrabold uppercase ${isActive ? 'text-[#EF534F]' : 'text-white'}`}>
@@ -127,9 +154,10 @@ const HomePage = () => {
                 </button>
               )
             })}
+            </div>
           </div>
         </div>
-      </section>
+      </div>
 
       {/* Service Cards */}
       <section className="bg-[#FAFAFA] relative">
@@ -147,7 +175,11 @@ const HomePage = () => {
           ) : filteredServices.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 justify-items-center">
               {filteredServices.map((service) => (
-                <ServiceCard key={service.id} service={service} />
+                <ServiceCard 
+                  key={service.id} 
+                  service={service} 
+                  customLink={activeCategory === 'marketplace' ? `/marketplace/list/${service.slug}` : null}
+                />
               ))}
             </div>
           ) : (
