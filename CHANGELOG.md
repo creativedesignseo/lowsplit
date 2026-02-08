@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-02-08
+
+### Added
+- **Skill System**: Implemented new standard for skill creation (`creador-de-skills-antigravity.md`) and first skill `guardar-cambios-git`.
+
+### Changed
+- **Dashboard Optimization**: Refactored `DashboardPage.jsx` to fetch data in parallel, significantly improving load times.
+- **Bundle Optimization**: Replaced named imports from `lucide-react` with direct path imports in `DashboardPage` and `ServiceDetail` to reduce bundle size.
+
 ## [1.3.1] - 2026-01-30
 
 ### Added

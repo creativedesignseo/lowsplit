@@ -1,11 +1,31 @@
 import { useState, useEffect, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { LogIn, Loader2, TrendingUp, Plus, ChevronRight, User, ShoppingBag, Zap, Clock, Search, CheckCircle, XCircle, AlertCircle, RotateCcw, Package, Filter, Shield } from 'lucide-react'
+import LinkIcon from 'lucide-react/dist/esm/icons/link'
+import LogIn from 'lucide-react/dist/esm/icons/log-in'
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
+import Plus from 'lucide-react/dist/esm/icons/plus'
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right'
+import User from 'lucide-react/dist/esm/icons/user'
+import ShoppingBag from 'lucide-react/dist/esm/icons/shopping-bag'
+import Zap from 'lucide-react/dist/esm/icons/zap'
+import Clock from 'lucide-react/dist/esm/icons/clock'
+import Search from 'lucide-react/dist/esm/icons/search'
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle'
+import XCircle from 'lucide-react/dist/esm/icons/x-circle'
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw'
+import Package from 'lucide-react/dist/esm/icons/package'
+import Filter from 'lucide-react/dist/esm/icons/filter'
+import Shield from 'lucide-react/dist/esm/icons/shield'
+import Wallet from 'lucide-react/dist/esm/icons/wallet'
+import ArrowDownCircle from 'lucide-react/dist/esm/icons/arrow-down-circle'
+import ArrowUpCircle from 'lucide-react/dist/esm/icons/arrow-up-circle'
+import History from 'lucide-react/dist/esm/icons/history'
 import { supabase } from '../lib/supabase'
 import { getLogoUrl } from '../lib/utils'
 import { useWallet } from '../hooks/useWallet'
-import { Wallet, ArrowDownCircle, ArrowUpCircle, History } from 'lucide-react'
 import RechargeModal from '../components/RechargeModal'
 
 const DashboardPage = () => {
@@ -98,19 +118,47 @@ const DashboardPage = () => {
   const fetchDashboardData = async (userId) => {
     setLoadingData(true)
     console.log('Fetching dashboard data for user:', userId)
+    
     try {
-      // Fetch user's purchases (memberships where they are a member)
-      const { data: membershipData, error: membershipError } = await supabase
-        .from('memberships')
-        .select(`
-          id,
-          role,
-          payment_status,
-          joined_at,
-          subscription_groups (
+      const [
+        { data: membershipData, error: membershipError },
+        { data: groupsData, error: groupsError },
+        { data: ordersData, error: ordersError }
+      ] = await Promise.all([
+        // 1. Fetch user's purchases (memberships where they are a member)
+        supabase
+          .from('memberships')
+          .select(`
             id,
+            role,
+            payment_status,
+            joined_at,
+            subscription_groups (
+              id,
+              price_per_slot,
+              next_payment_date,
+              status,
+              credentials_login,
+              credentials_password,
+              services (
+                id,
+                name,
+                slug,
+                category
+              )
+            )
+          `)
+          .eq('user_id', userId)
+          .eq('role', 'member'),
+
+        // 2. Fetch user's sales (groups where they are admin)
+        supabase
+          .from('subscription_groups')
+          .select(`
+            id,
+            title,
+            slots_occupied,
             price_per_slot,
-            next_payment_date,
             status,
             credentials_login,
             credentials_password,
@@ -118,17 +166,42 @@ const DashboardPage = () => {
               id,
               name,
               slug,
-              category
+              max_slots
             )
-          )
-        `)
-        .eq('user_id', userId)
-        .eq('role', 'member')
+          `)
+          .eq('admin_id', userId),
 
+        // 3. Fetch order history (payment transactions)
+        supabase
+          .from('payment_transactions')
+          .select(`
+            id,
+            amount,
+            currency,
+            status,
+            stripe_payment_intent_id,
+            created_at,
+            memberships (
+              subscription_groups (
+                services (
+                  name,
+                  slug
+                )
+              )
+            )
+          `)
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+      ])
+
+      // Handle Errors
       if (membershipError) console.error('Memberships error:', membershipError)
-      console.log('Memberships data:', membershipData)
-      
-      // Transform membership data to purchases format
+      if (groupsError) console.error('Groups error:', groupsError)
+      if (ordersError) console.error('Orders error:', ordersError)
+
+      // --- Transform Data ---
+
+      // 1. Purchases
       const purchasesData = (membershipData || []).map(m => ({
         id: m.id,
         groupId: m.subscription_groups?.id,
@@ -143,37 +216,14 @@ const DashboardPage = () => {
       }))
       setPurchases(purchasesData)
 
-      // Fetch user's sales (groups where they are admin)
-      const { data: groupsData, error: groupsError } = await supabase
-        .from('subscription_groups')
-        .select(`
-          id,
-          title,
-          slots_occupied,
-          price_per_slot,
-          status,
-          credentials_login,
-          credentials_password,
-          services (
-            id,
-            name,
-            slug,
-            max_slots
-          )
-        `)
-        .eq('admin_id', userId)
-      
-      if (groupsError) console.error('Groups error:', groupsError)
-      console.log('Groups data (sales):', groupsData)
-
-      // Transform groups data to sales format
+      // 2. Sales
       const salesData = (groupsData || []).map(g => ({
         id: g.id,
         service: g.services?.slug || 'unknown',
         name: g.title || g.services?.name || 'Grupo',
         sold: g.slots_occupied || 1,
         total: g.services?.max_slots || 4,
-        earnings: ((g.slots_occupied - 1) * (g.price_per_slot || 0)), // earnings from sold slots (excluding admin)
+        earnings: ((g.slots_occupied - 1) * (g.price_per_slot || 0)),
         pricePerSlot: g.price_per_slot || 0,
         status: g.status,
         login: g.credentials_login,
@@ -181,29 +231,7 @@ const DashboardPage = () => {
       }))
       setSales(salesData)
 
-      // Fetch order history (payment transactions)
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('payment_transactions')
-        .select(`
-          id,
-          amount,
-          currency,
-          status,
-          stripe_payment_intent_id,
-          created_at,
-          memberships (
-            subscription_groups (
-              services (
-                name,
-                slug
-              )
-            )
-          )
-        `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-
-      if (ordersError) console.error('Orders error:', ordersError)
+      // 3. Orders
       setOrders(ordersData || [])
 
     } catch (err) {
