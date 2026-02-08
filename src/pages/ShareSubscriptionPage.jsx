@@ -180,7 +180,7 @@ const ShareSubscriptionPage = () => {
                                 onClick={() => handleServiceSelect(service)}
                                 className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-[#EF534F] hover:bg-[#fff5f5] transition-all group text-left"
                             >
-                                <div className="w-12 h-12 bg-white rounded-lg shadow-sm flex items-center justify-center border border-gray-100 overflow-hidden relative">
+                                <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center border border-gray-100 overflow-hidden relative">
                                     <img src={getLogoUrl(service.slug, service.icon_url)} alt={service.name} className="w-full h-full object-cover" />
                                 </div>
                                 <div>
@@ -264,14 +264,14 @@ const ShareSubscriptionPage = () => {
                                     placeholder="Email de la cuenta"
                                     value={formData.email}
                                     onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                    className="w-full bg-white rounded-lg px-4 py-2 text-sm border border-yellow-200 focus:border-yellow-400 outline-none"
+                                    className="w-full bg-white rounded-xl px-4 py-2 text-sm border border-yellow-200 focus:border-yellow-400 outline-none"
                                 />
                                 <input 
                                     type="text" 
                                     placeholder="Contraseña / PIN"
                                     value={formData.password}
                                     onChange={(e) => setFormData({...formData, password: e.target.value})}
-                                    className="w-full bg-white rounded-lg px-4 py-2 text-sm border border-yellow-200 focus:border-yellow-400 outline-none"
+                                    className="w-full bg-white rounded-xl px-4 py-2 text-sm border border-yellow-200 focus:border-yellow-400 outline-none"
                                 />
                              </div>
                         </div>

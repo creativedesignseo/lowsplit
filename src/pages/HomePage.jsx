@@ -46,7 +46,7 @@ const benefits = [
 
 // Benefit Card
 const BenefitCard = ({ title, description, icon: Icon }) => (
-  <div className="flex items-start gap-3 p-6 bg-white rounded-[20px] w-full" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+  <div className="flex items-start gap-3 p-6 bg-white rounded-2xl w-full" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
     <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-white" style={{ boxShadow: '-5px 6px 8.7px rgba(0, 0, 0, 0.07)' }}>
       <Icon className="w-5 h-5 text-[#EF534F]" />
     </div>
@@ -117,7 +117,7 @@ const HomePage = () => {
                 <button
                   key={cat.id}
                   onClick={() => setActiveCategory(cat.id)}
-                  className={`w-[80px] sm:w-[100px] h-[60px] sm:h-[66px] rounded-[10px] flex flex-col items-center justify-center gap-1 cursor-pointer transition-all
+                  className={`w-[80px] sm:w-[100px] h-[60px] sm:h-[66px] rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer transition-all
                     ${isActive ? 'bg-white scale-105' : 'bg-white/10 hover:bg-white/20'}`}
                 >
                   <IconComponent className={`w-6 h-6 sm:w-8 sm:h-8 ${isActive ? 'text-[#EF534F]' : 'text-white'}`} />

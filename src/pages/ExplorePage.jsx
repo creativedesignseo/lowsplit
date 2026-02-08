@@ -280,7 +280,7 @@ const ExplorePage = () => {
                                 {group.title || service?.name}
                               </h3>
                               <div className="flex items-center gap-3 text-xs font-medium text-gray-500 mt-1">
-                                <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-md">
+                                <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-xl">
                                   {availableSlots} {availableSlots === 1 ? 'plaza' : 'plazas'}
                                 </span>
                                 {profile?.username && (

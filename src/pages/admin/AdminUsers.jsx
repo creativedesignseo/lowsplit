@@ -174,7 +174,7 @@ const AdminUsers = () => {
                                             value={user.role || 'user'} 
                                             onChange={(e) => handleRoleChange(user.id, e.target.value)}
                                             className={`
-                                                text-xs font-bold uppercase border-none rounded-md px-2 py-1 cursor-pointer focus:ring-1 focus:ring-purple-500
+                                                text-xs font-bold uppercase border-none rounded-xl px-2 py-1 cursor-pointer focus:ring-1 focus:ring-purple-500
                                                 ${user.role === 'admin' || user.role === 'super_admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}
                                             `}
                                         >
@@ -183,7 +183,7 @@ const AdminUsers = () => {
                                             <option value="super_admin">Super Admin</option>
                                         </select>
                                     ) : (
-                                        <span className={`px-2 py-1 rounded-md text-xs font-bold uppercase
+                                        <span className={`px-2 py-1 rounded-xl text-xs font-bold uppercase
                                             ${user.role === 'admin' || user.role === 'super_admin' ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-600'}
                                         `}>
                                             {user.role || 'User'}
@@ -192,11 +192,11 @@ const AdminUsers = () => {
                                 </td>
                                 <td className="px-6 py-4">
                                     {user.banned_until && new Date(user.banned_until) > new Date() ? (
-                                        <span className="flex items-center gap-1 text-red-600 text-xs font-bold bg-red-50 px-2 py-1 rounded-md w-fit">
+                                        <span className="flex items-center gap-1 text-red-600 text-xs font-bold bg-red-50 px-2 py-1 rounded-xl w-fit">
                                             <Ban className="w-3 h-3" /> Banned
                                         </span>
                                     ) : (
-                                        <span className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded-md w-fit">
+                                        <span className="flex items-center gap-1 text-green-600 text-xs font-bold bg-green-50 px-2 py-1 rounded-xl w-fit">
                                             <CheckCircle className="w-3 h-3" /> Active
                                         </span>
                                     )}

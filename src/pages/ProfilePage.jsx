@@ -314,14 +314,14 @@ const ProfilePage = () => {
                 type="email" 
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#EF534F]/20 focus:border-[#EF534F] text-gray-900"
+                className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#EF534F]/20 focus:border-[#EF534F] text-gray-900"
                 placeholder="ejemplo@correo.com"
                 autoFocus
               />
             </div>
             
             {/* Styled Fake ReCAPTCHA */}
-            <div className="bg-[#f9f9f9] border border-gray-300 rounded-md p-4 flex items-center justify-between shadow-sm">
+            <div className="bg-[#f9f9f9] border border-gray-300 rounded-xl p-4 flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <input 
@@ -423,7 +423,7 @@ const ProfilePage = () => {
                type="password" 
                value={passwordForm.new}
                onChange={(e) => setPasswordForm({ ...passwordForm, new: e.target.value })}
-               className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#EF534F]/20 focus:border-[#EF534F] text-gray-900"
+               className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#EF534F]/20 focus:border-[#EF534F] text-gray-900"
                placeholder="Mínimo 6 caracteres"
              />
           </div>
@@ -433,7 +433,7 @@ const ProfilePage = () => {
                type="password" 
                value={passwordForm.confirm}
                onChange={(e) => setPasswordForm({ ...passwordForm, confirm: e.target.value })}
-               className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#EF534F]/20 focus:border-[#EF534F] text-gray-900"
+               className="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#EF534F]/20 focus:border-[#EF534F] text-gray-900"
                placeholder="Repite la contraseña"
              />
           </div>

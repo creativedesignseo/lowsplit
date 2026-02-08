@@ -251,7 +251,7 @@ const Navbar = () => {
 
           {/* Mobile menu button */}
           <button 
-            className="md:hidden p-2 rounded-lg hover:bg-white/10 transition-colors"
+            className="md:hidden p-2 rounded-xl hover:bg-white/10 transition-colors"
             onClick={() => setIsOpen(!isOpen)}
           >
             {isOpen ? <X className="w-6 h-6 text-white" /> : <Menu className="w-6 h-6 text-white" />}
@@ -270,7 +270,7 @@ const Navbar = () => {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-white font-medium transition-all
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-white font-medium transition-all
                     ${isActive ? 'bg-white/20' : 'hover:bg-white/10'}`}
                   onClick={() => setIsOpen(false)}
                 >
@@ -286,7 +286,7 @@ const Navbar = () => {
             {user ? (
               <>
                 <div className="mb-2">
-                   <div className="px-3 py-2 flex items-center gap-3 bg-black/10 rounded-lg mb-2">
+                   <div className="px-3 py-2 flex items-center gap-3 bg-black/10 rounded-xl mb-2">
                       <div className="w-10 h-10 rounded-full overflow-hidden bg-white/20">
                           {profile?.avatar_url ? (
                             <img src={profile.avatar_url} alt="User" className="w-full h-full object-cover" />
@@ -306,7 +306,7 @@ const Navbar = () => {
                    <Link 
                       to="/wallet"
                       onClick={() => setIsOpen(false)}
-                      className="flex items-center justify-between px-3 py-2 bg-black/20 rounded-lg mb-2"
+                      className="flex items-center justify-between px-3 py-2 bg-black/20 rounded-xl mb-2"
                    >
                       <span className="text-white text-xs font-bold uppercase tracking-wider">Saldo</span>
                       <span className="text-white font-black">€{balance !== undefined ? balance.toFixed(2) : '0.00'}</span>
@@ -316,7 +316,7 @@ const Navbar = () => {
                 <Link 
                     to="/dashboard" 
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white hover:bg-white/10 transition-colors"
                 >
                     <LayoutDashboard className="w-5 h-5" />
                     <span className="font-medium">Mi Suscripción</span>
@@ -325,7 +325,7 @@ const Navbar = () => {
                 <Link 
                     to="/wallet" 
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white hover:bg-white/10 transition-colors"
                 >
                     <Wallet className="w-5 h-5" />
                     <span className="font-medium">Mi Billetera</span>
@@ -334,7 +334,7 @@ const Navbar = () => {
                 <Link 
                     to="/profile" 
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-white hover:bg-white/10 transition-colors"
                 >
                     <Settings className="w-5 h-5" />
                     <span className="font-medium">Configuración</span>
@@ -346,7 +346,7 @@ const Navbar = () => {
                         setIsOpen(false)
                         navigate('/login')
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-white hover:bg-red-600/20 transition-colors mt-2"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white hover:bg-red-600/20 transition-colors mt-2"
                 >
                     <LogOut className="w-5 h-5" />
                     <span className="font-medium">Cerrar Sesión</span>
@@ -367,11 +367,11 @@ const Navbar = () => {
             
             {/* Mobile Language & Search */}
             <div className="flex items-center gap-2 py-2">
-              <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors">
+              <button className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors">
                 <Globe className="w-5 h-5 text-white" />
                 <span className="text-white text-sm">Español</span>
               </button>
-              <button onClick={() => { setIsOpen(false); handleSearchClick() }} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors">
+              <button onClick={() => { setIsOpen(false); handleSearchClick() }} className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors">
                 <Search className="w-5 h-5 text-white" />
                 <span className="text-white text-sm">Buscar</span>
               </button>

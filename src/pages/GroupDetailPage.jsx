@@ -300,15 +300,15 @@ const GroupDetailPage = () => {
                         <div className="mt-6 space-y-3">
                             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Verificaciones</h3>
                             <div className="grid grid-cols-3 gap-2 text-center">
-                                <div className="flex flex-col items-center gap-1 p-2 bg-green-50 rounded-lg border border-green-100">
+                                <div className="flex flex-col items-center gap-1 p-2 bg-green-50 rounded-xl border border-green-100">
                                     <UserCheck className="w-5 h-5 text-green-600" />
                                     <span className="text-[10px] font-medium text-green-700">Identidad</span>
                                 </div>
-                                <div className="flex flex-col items-center gap-1 p-2 bg-green-50 rounded-lg border border-green-100">
+                                <div className="flex flex-col items-center gap-1 p-2 bg-green-50 rounded-xl border border-green-100">
                                     <Shield className="w-5 h-5 text-green-600" />
                                     <span className="text-[10px] font-medium text-green-700">Pago</span>
                                 </div>
-                                <div className="flex flex-col items-center gap-1 p-2 bg-blue-50 rounded-lg border border-blue-100">
+                                <div className="flex flex-col items-center gap-1 p-2 bg-blue-50 rounded-xl border border-blue-100">
                                     <MessageCircle className="w-5 h-5 text-blue-600" />
                                     <span className="text-[10px] font-medium text-blue-700">Teléfono</span>
                                 </div>
@@ -350,7 +350,7 @@ const GroupDetailPage = () => {
                                 <div className="text-3xl font-black text-gray-900">
                                     {availableSlots}<span className="text-lg text-gray-400 font-medium">/{service.max_slots}</span>
                                 </div>
-                                <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md">PUESTOS LIBRES</span>
+                                <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-xl">PUESTOS LIBRES</span>
                             </div>
                         </div>
 

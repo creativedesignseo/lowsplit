@@ -103,10 +103,10 @@ const Footer = () => {
             
             {/* Payment icons placeholder */}
             <div className="flex items-center gap-3">
-              <div className="w-14 h-14 bg-gray-600 rounded-lg" />
-              <div className="w-14 h-14 bg-gray-600 rounded-lg" />
-              <div className="w-14 h-14 bg-gray-600 rounded-lg" />
-              <div className="w-14 h-14 bg-gray-600 rounded-lg" />
+              <div className="w-14 h-14 bg-gray-600 rounded-xl" />
+              <div className="w-14 h-14 bg-gray-600 rounded-xl" />
+              <div className="w-14 h-14 bg-gray-600 rounded-xl" />
+              <div className="w-14 h-14 bg-gray-600 rounded-xl" />
             </div>
           </div>
         </div>
@@ -128,7 +128,7 @@ const Footer = () => {
         >
           {/* Visa */}
           <div 
-            className="flex flex-col items-center justify-center rounded-lg overflow-hidden"
+            className="flex flex-col items-center justify-center rounded-xl overflow-hidden"
             style={{ width: '200px', height: '100px', padding: '10px', background: '#1D2A36' }}
           >
             <div className="text-white text-3xl font-bold tracking-wider">VISA</div>
@@ -136,7 +136,7 @@ const Footer = () => {
 
           {/* Mastercard */}
           <div 
-            className="flex items-center justify-center rounded-lg overflow-hidden"
+            className="flex items-center justify-center rounded-xl overflow-hidden"
             style={{ width: '200px', height: '100px', padding: '10px', background: '#1D2A36' }}
           >
             <div className="relative" style={{ width: '100px', height: '62px' }}>
@@ -153,7 +153,7 @@ const Footer = () => {
 
           {/* Stripe */}
           <div 
-            className="flex flex-col items-center justify-center rounded-lg overflow-hidden"
+            className="flex flex-col items-center justify-center rounded-xl overflow-hidden"
             style={{ width: '200px', height: '100px', padding: '10px', background: '#1D2A36' }}
           >
             <div className="text-white text-2xl font-bold">stripe</div>
@@ -161,7 +161,7 @@ const Footer = () => {
 
           {/* Apple Pay */}
           <div 
-            className="flex flex-col items-center justify-center rounded-lg overflow-hidden"
+            className="flex flex-col items-center justify-center rounded-xl overflow-hidden"
             style={{ width: '200px', height: '100px', padding: '38px 38px 15px 38px', background: '#1D2A36' }}
           >
             <div className="text-white text-2xl font-semibold"> Pay</div>

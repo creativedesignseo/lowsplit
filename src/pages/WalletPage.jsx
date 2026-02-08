@@ -203,7 +203,7 @@ export default function WalletPage() {
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => navigateMonth(-1)}
-                  className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                  className="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center hover:bg-gray-100 transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4 text-gray-600" />
                 </button>
@@ -212,7 +212,7 @@ export default function WalletPage() {
                 </span>
                 <button 
                   onClick={() => navigateMonth(1)}
-                  className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center hover:bg-gray-100 transition-colors"
+                  className="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center hover:bg-gray-100 transition-colors"
                 >
                   <ChevronRight className="w-4 h-4 text-gray-600" />
                 </button>

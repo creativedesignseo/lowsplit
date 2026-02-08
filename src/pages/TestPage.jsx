@@ -83,7 +83,7 @@ const ServiceCard = ({ title, price, logo, features }) => (
 
 const FeatureItem = ({ icon: Icon, title, desc }) => (
     <div className="flex items-start gap-4 p-4">
-        <div className="bg-red-50 p-2 rounded-full text-[#EA4C46]">
+        <div className="bg-red-50 p-2 rounded-full text-[#EF534F]">
             <Icon className="w-6 h-6" />
         </div>
         <div>
@@ -102,7 +102,7 @@ const TestPage = () => {
       </Helmet>
 
       {/* --- HEADER SECTION --- */}
-      <header className="bg-[#F05F57] text-white pt-4 pb-32 relative overflow-hidden">
+      <header className="bg-[#EF534F] text-white pt-4 pb-32 relative overflow-hidden">
         {/* Top Bar */}
         <div className="container mx-auto px-4 flex justify-between items-center text-xs mb-8">
             <div className="font-black text-lg tracking-wider">LOGO</div>
@@ -139,7 +139,7 @@ const TestPage = () => {
                     {name: "Software", icon: Zap}
                 ].map((cat, idx) => (
                     <div key={idx} className={`flex flex-col items-center gap-2 cursor-pointer ${idx === 0 ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}>
-                        <div className={`p-3 rounded-xl ${idx === 0 ? 'bg-white text-[#F05F57]' : 'border border-white/30 text-white'}`}>
+                        <div className={`p-3 rounded-xl ${idx === 0 ? 'bg-white text-[#EF534F]' : 'border border-white/30 text-white'}`}>
                             {idx === 0 ? <Zap className="w-6 h-6" /> : <cat.icon className="w-5 h-5" />}  
                         </div>
                         <span className="text-[10px] font-bold uppercase">{cat.name}</span>
@@ -151,7 +151,7 @@ const TestPage = () => {
         {/* Curved Divider */}
          <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none">
             <svg className="relative block w-full h-[60px]" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
-                <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" className="fill-[#F05F57]"></path>
+                <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z" className="fill-[#EF534F]"></path>
             </svg> 
         </div>
       </header>

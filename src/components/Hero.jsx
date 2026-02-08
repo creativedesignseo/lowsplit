@@ -83,7 +83,7 @@ const Hero = () => {
                                 </div>
                                 <div className="space-y-4 mb-6">
                                     <div className="h-2 w-24 bg-red-600/10 rounded-full" />
-                                    <div className="h-8 w-full bg-slate-50 rounded-lg flex items-center justify-between px-3">
+                                    <div className="h-8 w-full bg-slate-50 rounded-xl flex items-center justify-between px-3">
                                         <span className="text-muted text-xs">Ahorro mensual</span>
                                         <span className="text-text-main font-bold text-sm">-$12.50</span>
                                     </div>

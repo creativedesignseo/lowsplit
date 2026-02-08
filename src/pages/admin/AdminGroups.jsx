@@ -199,7 +199,7 @@ const AdminGroups = () => {
                                 <tr key={group.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4">
                                         <div className="flex items-center gap-3">
-                                            <img src={group.services?.icon_url} alt="" className="w-8 h-8 rounded-lg object-contain bg-white shadow-sm" />
+                                            <img src={group.services?.icon_url} alt="" className="w-8 h-8 rounded-xl object-contain bg-white shadow-sm" />
                                             <div>
                                                 <div className="font-bold text-gray-900">{group.services?.name}</div>
                                                 <div className="text-xs text-gray-400 font-mono">{group.id.slice(0,8)}...</div>
@@ -225,7 +225,7 @@ const AdminGroups = () => {
                                         )}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`inline-block px-2 py-1 rounded-md text-xs font-bold ${
+                                        <span className={`inline-block px-2 py-1 rounded-xl text-xs font-bold ${
                                             group.status === 'active' || group.status === 'available' ? 'bg-green-100 text-green-700' :
                                             group.status === 'full' ? 'bg-blue-100 text-blue-700' :
                                             'bg-red-100 text-red-700'

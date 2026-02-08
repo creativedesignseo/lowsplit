@@ -348,15 +348,15 @@ const ServiceDetailPage = () => {
                      <div className="border-t border-gray-100 pt-6">
                         <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block mb-3">Ordenar por</label>
                         <div className="space-y-1">
-                             <button className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
+                             <button className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
                                 <span>Índice de confianza</span>
                                 <ChevronLeft className="w-4 h-4 rotate-270 text-gray-300" />
                              </button>
-                             <button className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
+                             <button className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
                                 <span>Tiempo de respuesta</span>
                                 <ChevronLeft className="w-4 h-4 rotate-270 text-gray-300" />
                              </button>
-                             <button className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
+                             <button className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-gray-50 text-gray-700 text-sm font-medium transition-colors">
                                 <span>Precio más bajo</span>
                                 <ChevronLeft className="w-4 h-4 rotate-270 text-gray-300" />
                              </button>
@@ -414,7 +414,7 @@ const ServiceDetailPage = () => {
                         </div>
                         <button 
                             onClick={handlePayment} 
-                            className="bg-[#111111] hover:bg-black text-white px-6 py-2.5 sm:px-8 sm:py-3 rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-gray-200 transition-transform transform active:scale-95 whitespace-nowrap"
+                            className="bg-[#EF534F] hover:bg-[#e0403c] text-white px-6 py-2.5 sm:px-8 sm:py-3 rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-red-200 transition-transform transform active:scale-95 whitespace-nowrap"
                         >
                             Unirme
                         </button>
