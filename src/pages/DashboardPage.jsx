@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import LinkIcon from 'lucide-react/dist/esm/icons/link'
-import LogIn from 'lucide-react/dist/esm/icons/log-in'
+// import LogIn from 'lucide-react/dist/esm/icons/log-in' // Unused
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
 import Plus from 'lucide-react/dist/esm/icons/plus'
@@ -23,10 +23,12 @@ import Wallet from 'lucide-react/dist/esm/icons/wallet'
 import ArrowDownCircle from 'lucide-react/dist/esm/icons/arrow-down-circle'
 import ArrowUpCircle from 'lucide-react/dist/esm/icons/arrow-up-circle'
 import History from 'lucide-react/dist/esm/icons/history'
+import Settings from 'lucide-react/dist/esm/icons/settings'
 import { supabase } from '../lib/supabase'
 import { getLogoUrl } from '../lib/utils'
 import { useWallet } from '../hooks/useWallet'
 import RechargeModal from '../components/RechargeModal'
+import EditGroupModal from '../components/EditGroupModal'
 
 const DashboardPage = () => {
   const [session, setSession] = useState(null)
@@ -167,7 +169,8 @@ const DashboardPage = () => {
               name,
               slug,
               max_slots
-            )
+            ),
+            memberships(count)
           `)
           .eq('admin_id', userId),
 
@@ -227,7 +230,8 @@ const DashboardPage = () => {
         pricePerSlot: g.price_per_slot || 0,
         status: g.status,
         login: g.credentials_login,
-        password: g.credentials_password
+        password: g.credentials_password,
+        real_members: g.memberships?.[0]?.count || 0
       }))
       setSales(salesData)
 
