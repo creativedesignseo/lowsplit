@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+
+## [1.4.1] - 2026-02-09
+
+### Fixed
+- **Dashboard Logic**: Restored "Manage" button and `EditGroupModal` functionality.
+- **Data Refresh**: Fixed bug where dashboard data wouldn't refresh after group updates due to missing user ID.
+
+### Changed
+- **Group Management**: Moved manual slot management from `GroupDetailPage` to `DashboardPage` modal.
+
 ## [1.4.0] - 2026-02-08
 
 ### Added
