@@ -334,7 +334,7 @@ const GroupDetailPage = () => {
                 <div className="lg:col-span-4 space-y-6">
                     
                     {/* 2. PRICE & PURCHASE CARD */}
-                    <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 p-6 sticky top-24">
+                    <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 p-6">
                         <div className="space-y-4">
                             <div className="flex justify-between items-center text-sm border-b border-gray-50 pb-3">
                                 <span className="text-gray-500">Entrega garantizada</span>
@@ -515,6 +515,23 @@ const GroupDetailPage = () => {
           </div>
         </div>
       )}
+
+      {/* MOBILE STICKY FOOTER (Visible only on mobile/tablet) */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] p-4 z-40 lg:hidden safe-area-bottom">
+        <div className="flex items-center gap-4 max-w-md mx-auto">
+            <button 
+                onClick={handlePaymentClick}
+                disabled={joining}
+                className="flex-1 bg-[#EF534F] hover:bg-[#d64541] text-white font-bold py-3 px-6 rounded-full shadow-lg shadow-red-100 transition-all active:scale-95 flex items-center justify-center"
+            >
+                {joining ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Comprar ahora'}
+            </button>
+            <div className="flex flex-col items-end">
+                <span className="text-xs text-gray-500 font-medium">Total</span>
+                <span className="text-xl font-black text-[#EF534F]">€{total.toFixed(2)}</span>
+            </div>
+        </div>
+      </div>
 
     </>
   )
