@@ -55,7 +55,8 @@ const GroupDetailPage = () => {
                 reputation_score,
                 avatar_url,
                 created_at
-            )
+            ),
+            memberships(count)
         `)
         .eq('id', id)
         .single()
@@ -332,6 +333,82 @@ const GroupDetailPage = () => {
 
                 {/* RIGHT COLUMN (Sidebar) */}
                 <div className="lg:col-span-4 space-y-6">
+
+                    {/* ADMIN PANEL (Only visible to owner) */}
+                    {session?.user?.id === group.admin_id && (
+                        <div className="bg-white rounded-[20px] shadow-sm border border-orange-100 p-6 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-20 h-20 bg-orange-50 rounded-bl-full -mr-10 -mt-10 z-0"></div>
+                            <div className="relative z-10">
+                                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                    <ShieldCheck className="w-5 h-5 text-orange-500" />
+                                    Gestionar Grupo
+                                </h3>
+                                
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Ocupación (Slots)</label>
+                                        <div className="flex items-center justify-between bg-gray-50 rounded-xl p-2 border border-gray-200">
+                                            <button 
+                                                onClick={async () => {
+                                                    const currentReal = (group.memberships?.[0]?.count || 0) + 1 // +1 for admin
+                                                    if (group.slots_occupied <= currentReal) return
+                                                    
+                                                    const { error } = await supabase
+                                                        .from('subscription_groups')
+                                                        .update({ slots_occupied: group.slots_occupied - 1 })
+                                                        .eq('id', id)
+                                                    
+                                                    if (error) alert('Error al actualizar slots')
+                                                    else window.location.reload() // Simple reload to reflect changes
+                                                }}
+                                                disabled={group.slots_occupied <= ((group.memberships?.[0]?.count || 0) + 1)}
+                                                className="w-10 h-10 bg-white rounded-lg shadow-sm border border-gray-200 flex items-center justify-center hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 transition-all font-bold text-lg"
+                                            >
+                                                -
+                                            </button>
+                                            
+                                            <div className="text-center">
+                                                <span className="text-2xl font-black text-gray-900">{group.slots_occupied}</span>
+                                                <span className="text-xs text-gray-400 font-medium block">/ {service.max_slots}</span>
+                                            </div>
+
+                                            <button 
+                                                onClick={async () => {
+                                                    if (group.slots_occupied >= service.max_slots) return
+                                                    
+                                                    const { error } = await supabase
+                                                        .from('subscription_groups')
+                                                        .update({ slots_occupied: group.slots_occupied + 1 })
+                                                        .eq('id', id)
+                                                    
+                                                    if (error) alert('Error al actualizar slots')
+                                                    else window.location.reload()
+                                                }}
+                                                disabled={group.slots_occupied >= service.max_slots}
+                                                className="w-10 h-10 bg-white rounded-lg shadow-sm border border-gray-200 flex items-center justify-center hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 transition-all font-bold text-lg"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 mt-2 text-center">
+                                            Mínimo real: {(group.memberships?.[0]?.count || 0) + 1} (Tú + Miembros)
+                                        </p>
+                                    </div>
+
+                                    <div className="pt-2 border-t border-orange-100">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <span className="text-gray-600">Estado</span>
+                                            <span className={`px-2 py-0.5 rounded-full font-bold text-xs ${
+                                                group.status === 'available' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                                            }`}>
+                                                {group.status === 'available' ? 'Disponible' : 'Completo/Cerrado'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     
                     {/* 2. PRICE & PURCHASE CARD */}
                     <div className="bg-white rounded-[20px] shadow-sm border border-gray-100 p-6">

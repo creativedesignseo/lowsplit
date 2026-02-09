@@ -46,9 +46,12 @@ const Layout = ({ children }) => {
   )
 }
 
+import ScrollToTop from './components/ScrollToTop'
+
 function App() {
   return (
     <>
+      <ScrollToTop />
       <Helmet>
         <title>LowSplit - Comparte suscripciones, ahorra dinero</title>
       </Helmet>

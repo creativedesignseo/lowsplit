@@ -218,7 +218,9 @@ const ShareSubscriptionPage = () => {
                         <div>
                             <label className="block text-sm font-bold text-gray-700 mb-2">¿Cuántos perfiles libres tienes?</label>
                             <div className="flex gap-3">
-                                {[1, 2, 3, 4].map(num => (
+                                {[...Array(Math.max(1, (selectedService.max_slots || 5) - 1))].map((_, i) => {
+                                    const num = i + 1;
+                                    return (
                                     <button
                                         key={num}
                                         onClick={() => setFormData({...formData, slots: num})}
@@ -230,7 +232,8 @@ const ShareSubscriptionPage = () => {
                                     >
                                         {num}
                                     </button>
-                                ))}
+                                    )
+                                })}
                             </div>
                         </div>
 
