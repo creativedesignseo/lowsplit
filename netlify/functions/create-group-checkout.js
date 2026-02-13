@@ -1,12 +1,14 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { createClient } = require('@supabase/supabase-js');
+import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-exports.handler = async function(event) {
+export async function handler(event) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -67,7 +69,7 @@ exports.handler = async function(event) {
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ sessionId: session.id })
+      body: JSON.stringify({ sessionId: session.id, url: session.url })
     };
   } catch (error) {
     console.error('Error creating group checkout session:', error);
@@ -77,4 +79,4 @@ exports.handler = async function(event) {
       body: JSON.stringify({ error: error.message })
     };
   }
-};
+}
