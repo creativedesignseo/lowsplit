@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 
 
+## [1.4.3] - 2026-02-13
+
+### Critical Fixes/Hotfix
+- **Payment System Repair**: Resolved root cause of Netlify function crashes by switching `netlify/functions/package.json` to `"type": "module"`.
+- **Database Schema**: Created missing RPC function `increment_group_slots` required for group joins.
+- **Webhook Reliability**: Re-architected `stripe-webhook.js` to strictly enforce transaction recording *before* fulfillment logic, preventing data loss.
+- **Checkout Button**: Fixed missing Supabase client initialization in `create-checkout.js` that prevented price lookup.
+
 ## [1.4.2] - 2026-02-13
 
 ### Added
