@@ -8,11 +8,22 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// Helper to log to DB since we can't see Netlify logs
+async function logDebug(message, details = {}) {
+  try {
+    await supabase.from('debug_logs').insert({ message, details });
+  } catch (e) {
+    console.error('Logging failed:', e);
+  }
+}
+
 export async function handler(event) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Content-Type': 'application/json'
   };
+
+  await logDebug('Webhook triggered', { httpMethod: event.httpMethod });
 
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, headers, body: 'Method Not Allowed' };
@@ -28,7 +39,9 @@ export async function handler(event) {
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
+    await logDebug('Event constructed', { type: stripeEvent.type, id: stripeEvent.id });
   } catch (err) {
+    await logDebug('Webhook Signature Error', { error: err.message });
     console.error('Webhook Error:', err.message);
     return {
       statusCode: 400,
@@ -42,6 +55,8 @@ export async function handler(event) {
   if (stripeEvent.type === 'checkout.session.completed') {
     const session = stripeEvent.data.object;
     
+    await logDebug('Processing checkout.session.completed', { sessionId: session.id, metadata: session.metadata });
+
     console.log('=== CHECKOUT SESSION COMPLETED ===' );
     console.log('Session ID:', session.id);
     console.log('Metadata:', JSON.stringify(session.metadata));
@@ -54,6 +69,7 @@ export async function handler(event) {
       // Fallback: If no metadata userId, look up by email
       if (!userId && customerEmail) {
          console.log('No metadata userId, looking up by email:', customerEmail);
+         await logDebug('Looking up user by email', { email: customerEmail });
          const { data: authData } = await supabase.auth.admin.listUsers();
          const user = authData?.users?.find(u => u.email.toLowerCase() === customerEmail.toLowerCase());
          if (user) userId = user.id;
@@ -61,6 +77,7 @@ export async function handler(event) {
       
       if (!userId) {
         console.error('CRITICAL: User IDENTIFICATION FAILED. Email:', customerEmail);
+        await logDebug('CRITICAL: User ID missing', { customerEmail });
         // We still log the transaction if we have an email or something, but we need a user_id for the table
       }
 
@@ -71,6 +88,8 @@ export async function handler(event) {
       const amountPaid = session.amount_total / 100;
       const stripeId = session.payment_intent || session.id;
       const groupIdFromMeta = session.metadata?.groupId;
+
+      await logDebug('Extracted Data', { type, months, serviceName, amountPaid, stripeId, userId });
 
       // 3. RECORD TRANSACTION IMMEDIATELY (VITAL)
       // We do this BEFORE any fulfillment logic so we never lose a payment record
@@ -88,8 +107,10 @@ export async function handler(event) {
 
       if (txError) {
         console.error('Transaction Recording Error (Non-blocking):', txError);
+        await logDebug('Transaction/Insert Error', { txError });
       } else {
         console.log('Transaction recorded successfully:', transaction.id);
+        await logDebug('Transaction recorded', { transactionId: transaction.id });
       }
 
       // 4. Fulfillment Logic
@@ -97,6 +118,7 @@ export async function handler(event) {
       // --- FLOW A: Wallet Top-Up ---
       if (type === 'top_up' && userId) {
         console.log('Processing Top-up...');
+        await logDebug('Starting Top-up flow');
         const { error: rpcError } = await supabase.rpc('handle_wallet_topup', {
           p_user_id: userId,
           p_amount: amountPaid,
@@ -118,6 +140,7 @@ export async function handler(event) {
       // --- FLOW B: Group Join (Card Payment) ---
       if (type === 'group_join' && userId && groupIdFromMeta) {
         console.log('Processing Group Join...');
+        await logDebug('Starting Group Join flow');
         const walletDeducted = parseFloat(session.metadata?.walletDeducted || '0');
 
         const { error: rpcError } = await supabase.rpc('handle_join_group_card', {
@@ -150,6 +173,7 @@ export async function handler(event) {
       // --- FLOW C: Standard Subscription (Auto-assign) ---
       if (type === 'subscription' && userId && serviceName) {
         console.log('Processing Auto-assignment for:', serviceName);
+        await logDebug('Starting Auto-assignment flow', { serviceName });
         let finalGroupId = groupIdFromMeta;
 
         // Find Service
@@ -174,6 +198,7 @@ export async function handler(event) {
               finalGroupId = availableGroup.id;
            } else {
               console.log('Creating new auto-group...');
+              await logDebug('Creating new group');
               const { data: newGroup } = await supabase
                   .from('subscription_groups')
                   .insert({
@@ -195,6 +220,7 @@ export async function handler(event) {
 
            // Create Membership
            if (finalGroupId) {
+              await logDebug('Creating membership', { finalGroupId });
               const { data: membership, error: memError } = await supabase
                 .from('memberships')
                 .insert({
@@ -219,15 +245,20 @@ export async function handler(event) {
                 // Update Slots
                 await supabase.rpc('increment_group_slots', { group_id: finalGroupId });
                 console.log('Auto-fulfillment complete!');
+                await logDebug('Fullfilment Complete Success');
               } else {
                 console.error('Membership fulfillment failed:', memError);
+                await logDebug('Membership failed', { memError });
               }
            }
+        } else {
+            await logDebug('Service not found', { serviceName });
         }
       }
 
     } catch (error) {
       console.error('Webhook Runtime Error:', error);
+      await logDebug('Runtime Error Catch', { error: error.message, stack: error.stack });
       // We return 200 to Stripe anyway to avoid repeated retries of failing logic 
       // since the payment IS recorded in step 3.
     }
