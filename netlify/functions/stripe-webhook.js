@@ -143,7 +143,7 @@ export async function handler(event) {
         await logDebug('Starting Group Join flow');
         const walletDeducted = parseFloat(session.metadata?.walletDeducted || '0');
 
-        const { error: rpcError } = await supabase.rpc('handle_join_group_card', {
+        const { data: newMembershipId, error: rpcError } = await supabase.rpc('handle_join_group_card', {
           p_user_id: userId,
           p_group_id: groupIdFromMeta,
           p_card_amount: amountPaid,
@@ -152,6 +152,15 @@ export async function handler(event) {
         });
 
         if (rpcError) throw rpcError;
+
+        // Link transaction to new membership
+        if (transaction && newMembershipId) {
+          await supabase
+            .from('payment_transactions')
+            .update({ membership_id: newMembershipId })
+            .eq('id', transaction.id);
+          await logDebug('Transaction linked to membership', { transactionId: transaction.id, membershipId: newMembershipId });
+        }
 
         // Notification
         const { data: groupData } = await supabase

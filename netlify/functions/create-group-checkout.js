@@ -62,7 +62,8 @@ export async function handler(event) {
         type: 'group_join',
         groupId: groupId,
         userId: userId,
-        walletDeducted: walletDeducted.toString()
+        walletDeducted: walletDeducted.toString(),
+        serviceName: serviceName
       }
     });
 
