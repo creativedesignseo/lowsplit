@@ -11,3 +11,9 @@
 
 [functions]
   node_bundler = "esbuild"
+
+# SEGURIDAD ANTI-SEO (Borrar esta sección antes de producción)
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"

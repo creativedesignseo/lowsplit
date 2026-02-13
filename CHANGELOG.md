@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 
+## [1.4.2] - 2026-02-13
+
+### Added
+- **SEO Protection**: Implemented `X-Robots-Tag: noindex` in `netlify.toml` to prevent staging indexing.
+- **Email Templates**: Designed modern HTML template for 'Confirm Signup' emails (`email_template_design.html`).
+
+### Changed
+- **Site Mapping**: Generated `radiografia-sitio.md` detailing the complete URL structure for future SEO strategy.
+
 ## [1.4.1] - 2026-02-09
 
 ### Fixed

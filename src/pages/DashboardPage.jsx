@@ -49,6 +49,7 @@ const DashboardPage = () => {
   const { balance, transactions, isLoading: loadingWallet } = useWallet(session?.user?.id)
 
   // Credentials Edit State
+  const [editingGroup, setEditingGroup] = useState(null)
   const [editingCreds, setEditingCreds] = useState(null) // group ID
   const [credsForm, setCredsForm] = useState({ login: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
@@ -543,16 +544,17 @@ const DashboardPage = () => {
                                               </span>
                                           </div>
                                           
-                                          {/* Manage Creds Button (Only for Owners) */}
+                                          {/* Manage Group Button (Edit Slots/Creds) */}
                                           <button 
                                             onClick={(e) => {
                                                 e.preventDefault();
                                                 e.stopPropagation();
-                                                handleEditCreds(group);
+                                                setEditingGroup(group);
                                             }}
-                                            className="text-xs font-bold text-[#EF534F] hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1 rounded-full transition-colors"
+                                            className="text-xs font-bold text-gray-700 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors flex items-center gap-1"
                                           >
-                                              Gestionar Acceso 🔒
+                                              <Settings className="w-3 h-3" />
+                                              Gestionar
                                           </button>
                                       </div>
                                   </div>
@@ -892,6 +894,17 @@ const DashboardPage = () => {
             onClose={() => setShowRechargeModal(false)} 
             user={session?.user} 
         />
+        {/* Edit Group Modal */}
+        {editingGroup && (
+            <EditGroupModal 
+                group={editingGroup} 
+                onClose={() => setEditingGroup(null)} 
+                onUpdate={() => {
+                    setEditingGroup(null)
+                    if (session?.user?.id) fetchDashboardData(session.user.id)
+                }} 
+            />
+        )}
       </section>
     </>
   )
