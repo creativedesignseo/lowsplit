@@ -46,6 +46,8 @@ VITE_SUPABASE_ANON_KEY=tu_anon_key
 
 # Stripe
 VITE_STRIPE_PUBLISHABLE_KEY=tu_stripe_publishable_key
+STRIPE_SECRET_KEY=tu_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=tu_stripe_webhook_signing_secret
 
 # App
 VITE_APP_URL=http://localhost:5173
