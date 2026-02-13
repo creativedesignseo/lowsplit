@@ -51,16 +51,20 @@ exports.handler = async function(event) {
     try {
       // 1. Identify User
       const customerEmail = session.customer_email;
-      let userId = null;
+      let userId = session.metadata?.userId || null;
 
-      const { data: authData } = await supabase.auth.admin.listUsers();
-      const user = authData?.users?.find(u => u.email === customerEmail);
+      // Fallback: If no metadata userId, look up by email
+      if (!userId && customerEmail) {
+         console.log('No metadata userId, looking up by email:', customerEmail);
+         const { data: authData } = await supabase.auth.admin.listUsers();
+         const user = authData?.users?.find(u => u.email === customerEmail);
+         if (user) userId = user.id;
+      }
       
-      if (user) {
-        userId = user.id;
-        console.log('User found:', userId);
+      if (userId) {
+        console.log('User identified:', userId);
       } else {
-        console.error('User not found via email:', customerEmail);
+        console.error('User IDENTIFICATION FAILED. Email:', customerEmail);
       }
 
       // 2. Extract Metadata & Auto-Assign Logic

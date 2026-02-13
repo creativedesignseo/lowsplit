@@ -76,6 +76,7 @@ const ServiceDetailPage = () => {
             priceAmount: selectedPlan.totalPrice,
             months: selectedPlan.months,
             userEmail: session?.user?.email || null,
+            userId: session?.user?.id || null,
             groupId: null 
           })
         }

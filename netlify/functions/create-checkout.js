@@ -19,7 +19,7 @@ export async function handler(event) {
   }
 
   try {
-    const { serviceName, priceAmount, months, userEmail, groupId } = JSON.parse(event.body);
+    const { serviceName, priceAmount, months, userEmail, userId, groupId } = JSON.parse(event.body);
 
     if (!priceAmount || !serviceName) {
       return {
@@ -50,6 +50,7 @@ export async function handler(event) {
       success_url: `${event.headers.origin || event.headers.referer?.split('/').slice(0, 3).join('/')}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${event.headers.origin || event.headers.referer?.split('/').slice(0, 3).join('/')}/explore`,
       metadata: {
+        userId: userId || '',
         groupId: groupId || '',
         months: String(months || 1),
         serviceName: serviceName || ''
