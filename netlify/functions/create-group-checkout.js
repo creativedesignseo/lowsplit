@@ -56,8 +56,8 @@ export async function handler(event) {
         quantity: 1,
       }],
       mode: 'payment',
-      success_url: `${event.headers.origin || 'https://lowsplit.netlify.app'}/dashboard?tab=purchases&success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${event.headers.origin || 'https://lowsplit.netlify.app'}/group/${groupId}?success=false`,
+      success_url: `${event.headers.origin || 'https://lowsplit-app.netlify.app'}/dashboard?tab=purchases&success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${event.headers.origin || 'https://lowsplit-app.netlify.app'}/group/${groupId}?success=false`,
       metadata: {
         type: 'group_join',
         groupId: groupId,

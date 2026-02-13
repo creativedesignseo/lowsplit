@@ -34,6 +34,10 @@ export async function handler(event) {
       };
     }
 
+    // Determine base URL reliably
+    const PROD_URL = 'https://lowsplit-app.netlify.app';
+    const baseUrl = event.headers.origin || event.headers.referer?.split('/').slice(0, 3).join('/') || PROD_URL;
+
     // 1. Fetch Service details from DB to get REAL price (Security)
     const { data: service, error: serviceError } = await supabase
       .from('services')
@@ -47,7 +51,6 @@ export async function handler(event) {
     }
 
     // 2. Calculate Price on Server (Base/Slots * 1.25 Margin)
-    // Matches utils.js calculateSlotPrice logic
     const margin = 1.25
     const basePrice = (service.total_price / service.max_slots) * margin
     const finalPrice = Math.round(basePrice * 100) // Stripe requires integer cents
@@ -70,8 +73,8 @@ export async function handler(event) {
         }
       ],
       mode: 'payment',
-      success_url: `${event.headers.origin || event.headers.referer?.split('/').slice(0, 3).join('/')}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${event.headers.origin || event.headers.referer?.split('/').slice(0, 3).join('/')}/explore`,
+      success_url: `${baseUrl}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/explore`,
       metadata: {
         userId: userId || '',
         groupId: groupId || '',
