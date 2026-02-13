@@ -1,6 +1,6 @@
-export async function handler(event) {
+exports.handler = async function(event) {
   return {
     statusCode: 200,
-    body: JSON.stringify({ message: "pong js" })
+    body: JSON.stringify({ message: "pong cjs" })
   };
-}
+};
