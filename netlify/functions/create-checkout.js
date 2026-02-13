@@ -19,9 +19,9 @@ export async function handler(event) {
   }
 
   try {
-    const { serviceName, priceAmount, months, userEmail, userId, groupId } = JSON.parse(event.body);
+    const { serviceName, months, userEmail, userId, groupId } = JSON.parse(event.body);
 
-    if (!priceAmount || !serviceName) {
+    if (!serviceName) {
       return {
         statusCode: 400,
         headers,
@@ -29,7 +29,25 @@ export async function handler(event) {
       };
     }
 
-    // Create Stripe Checkout Session
+    // 1. Fetch Service details from DB to get REAL price (Security)
+    const { data: service, error: serviceError } = await supabase
+      .from('services')
+      .select('*')
+      .eq('name', serviceName)
+      .single()
+
+    if (serviceError || !service) {
+      console.error('Service lookup error:', serviceError);
+      throw new Error('Servicio no encontrado o no disponible')
+    }
+
+    // 2. Calculate Price on Server (Base/Slots * 1.25 Margin)
+    // Matches utils.js calculateSlotPrice logic
+    const margin = 1.25
+    const basePrice = (service.total_price / service.max_slots) * margin
+    const finalPrice = Math.round(basePrice * 100) // Stripe requires integer cents
+
+    // 3. Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       customer_email: userEmail || undefined,
@@ -38,10 +56,10 @@ export async function handler(event) {
           price_data: {
             currency: 'eur',
             product_data: {
-              name: `${serviceName} - ${months} ${months === 1 ? 'mes' : 'meses'}`,
-              description: `Acceso compartido a ${serviceName}`
+              name: `${service.name} - ${months} ${months === 1 ? 'mes' : 'meses'}`,
+              description: `Acceso compartido a ${service.name} gestionado por LowSplit`
             },
-            unit_amount: Math.round(priceAmount * 100)
+            unit_amount: finalPrice
           },
           quantity: 1
         }

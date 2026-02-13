@@ -46,7 +46,7 @@ const ServiceDetailPage = () => {
   const plans = service ? (() => {
     const monthlyPrice = parseFloat(calculateSlotPrice(service.total_price, service.max_slots))
     return [
-      { id: 1, months: 1, label: '1 Mes', pricePerMonth: monthlyPrice * 1.2, totalPrice: monthlyPrice * 1.2, save: 0 },
+      { id: 1, months: 1, label: '1 Mes', pricePerMonth: monthlyPrice, totalPrice: monthlyPrice, save: 0 },
     ]
   })() : []
 

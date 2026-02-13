@@ -84,7 +84,6 @@ export async function handler(event) {
                     max_slots: service.max_slots,
                     slots_occupied: 0,
                     status: 'available',
-                    payment_cycle: 'monthly',
                     visibility: 'public'
                 })
                 .select()
