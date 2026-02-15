@@ -44,7 +44,7 @@ const ServiceCard = ({ service, customLink }) => {
                     <div 
                         className="spu-card-radian absolute bottom-0 left-0 right-0 h-[25px] z-0" 
                         style={{
-                            background: '#EF534F',
+                            background: '#1E293B',
                             borderRadius: '50% 50% 0 0 / 100% 100% 0 0',
                             transform: 'scaleX(1.3)', 
                             bottom: '-1px'
@@ -53,14 +53,9 @@ const ServiceCard = ({ service, customLink }) => {
                 </div>
 
                 {/* MIDDLE BOX: Price & Social Proof */}
-                <div className="spu-card-bottom-box text-center pb-6 pt-2" style={{ background: '#EF534F' }}>
+                <div className="spu-card-bottom-box text-center pb-6 pt-2 bg-card-dark">
                     
-                    {/* Buy Message */}
-                    <div className="spu-buy-message mb-3 flex justify-center">
-                         <div className="inline-block bg-black/10 rounded-full px-3 py-1 text-white text-[11px] font-medium">
-                            <b>{recentData.buyer}</b> compró <b>1</b> hace {recentData.time} días
-                        </div>
-                    </div>
+
 
                     {/* Price */}
                     <div className="spu-price text-white font-bold mb-0 leading-none flex items-start justify-center gap-0.5">
@@ -74,34 +69,14 @@ const ServiceCard = ({ service, customLink }) => {
                 </div>
             </div>
 
-            {/* 2. BOTTOM WRAPPER (Features & Button) - Pinkish/White */}
-            <div className="spu-intro-box flex-grow flex flex-col p-4 bg-[#fdf2f2] relative">
-                 {/* Decorative curve from red to pink if needed, but usually flat here based on new image */}
-                 
-                 {/* Features List */}
-                 <div className="space-y-2 mb-4 flex-grow">
-                    {features.slice(0, 3).map((feature, index) => (
-                        <div key={index} className="flex items-start gap-2 max-w-[90%] mx-auto">
-                            <Check className="w-3.5 h-3.5 text-[#EF534F] flex-shrink-0 mt-0.5" strokeWidth={3} />
-                            <span className="text-[#EF534F] text-xs text-left leading-tight font-medium">{feature}</span>
-                        </div>
-                    ))}
-                 </div>
-
-                 {/* Button */}
+            {/* 2. BOTTOM WRAPPER (Button Only) */}
+            <div className="spu-intro-box flex-grow flex flex-col p-4 bg-card-dark relative">
                  <div className="mt-auto">
                     <button 
-                        className="w-full py-2.5 rounded-full text-white font-bold text-sm uppercase tracking-wider transition-all hover:opacity-90 hover:scale-[1.02] shadow-sm"
-                        style={{ background: '#EF534F' }}
+                        className="w-full py-2.5 rounded-full text-[#1E293B] font-bold text-sm uppercase tracking-wider transition-all hover:opacity-90 hover:scale-[1.02] shadow-sm bg-accent-400"
                     >
                         Comprar Ahora
                     </button>
-                    
-                    <div className="text-center mt-2">
-                         <span className="text-[#EF534F] text-xs font-bold underline cursor-pointer hover:opacity-80">
-                            Revisar detalles
-                         </span>
-                    </div>
                  </div>
             </div>
 

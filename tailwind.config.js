@@ -14,11 +14,17 @@ export default {
           200: '#fecaca',
           300: '#fca5a5',
           400: '#f87171',
-          500: '#EF534F', // Exact color from Figma: --Color-primario-GamsGo
+          500: '#0B1120', // Exact color from Figma: --Color-primario-GamsGo
           600: '#dc2626',
           700: '#b91c1c',
           800: '#991b1b',
           900: '#7f1d1d',
+        },
+        accent: {
+          400: '#42FDC8',
+        },
+        card: {
+          dark: '#1E293B',
         },
         // Background colors from Figma
         background: {

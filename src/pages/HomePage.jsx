@@ -50,7 +50,7 @@ const benefits = [
 const BenefitCard = ({ title, description, icon: Icon }) => (
   <div className="flex items-start gap-3 p-6 bg-white rounded-2xl w-full" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
     <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 bg-white" style={{ boxShadow: '-5px 6px 8.7px rgba(0, 0, 0, 0.07)' }}>
-      <Icon className="w-5 h-5 text-[#EF534F]" />
+      <Icon className="w-5 h-5 text-primary-500" />
     </div>
     <div className="flex flex-col gap-1">
       <h3 className="text-black text-base font-bold">{title}</h3>
@@ -119,7 +119,7 @@ const HomePage = () => {
       </Helmet>
 
       {/* Hero Section */}
-      <section style={{ background: '#EF534F' }} className="pt-24 pb-6">
+      <section className="bg-primary-500 pt-24 pb-6">
         <div className="max-w-[1440px] mx-auto px-4">
           <div className="flex flex-col items-center gap-2 max-w-[1000px] mx-auto text-center">
             <h1 className="text-white font-medium text-2xl sm:text-3xl lg:text-[32px]">
@@ -133,7 +133,7 @@ const HomePage = () => {
       </section>
       
       {/* Categories - Sticky Bar */}
-      <div className="sticky top-[64px] z-40 pb-4 pt-2 shadow-sm transition-all" style={{ background: '#EF534F' }}>
+      <div className="sticky top-[64px] z-40 pb-4 pt-2 shadow-sm transition-all bg-primary-500">
         <div className="max-w-[1440px] mx-auto px-4">
           <div className="w-full overflow-x-auto scrollbar-hide">
             <div className="flex gap-3 sm:gap-4 md:justify-center min-w-max px-2">
@@ -147,8 +147,8 @@ const HomePage = () => {
                   className={`w-[80px] sm:w-[100px] h-[60px] sm:h-[66px] rounded-xl flex flex-col items-center justify-center gap-1 cursor-pointer transition-all flex-shrink-0
                     ${isActive ? 'bg-white scale-105 shadow-lg' : 'bg-white/10 hover:bg-white/20'}`}
                 >
-                  <IconComponent className={`w-6 h-6 sm:w-8 sm:h-8 ${isActive ? 'text-[#EF534F]' : 'text-white'}`} />
-                  <span className={`text-[10px] sm:text-xs font-extrabold uppercase ${isActive ? 'text-[#EF534F]' : 'text-white'}`}>
+                  <IconComponent className={`w-6 h-6 sm:w-8 sm:h-8 ${isActive ? 'text-primary-500' : 'text-white'}`} />
+                  <span className={`text-[10px] sm:text-xs font-extrabold uppercase ${isActive ? 'text-primary-500' : 'text-white'}`}>
                     {cat.name}
                   </span>
                 </button>
@@ -161,12 +161,12 @@ const HomePage = () => {
 
       {/* Service Cards */}
       <section className="bg-[#FAFAFA] relative">
-        <div className="absolute left-0 right-0 top-0 h-[80px]" style={{ background: '#EF534F' }} />
+        <div className="absolute left-0 right-0 top-0 h-[80px] bg-primary-500" />
         
         <div className="relative max-w-[1366px] mx-auto px-4 py-8">
           {isLoading ? (
             <div className="flex justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-[#EF534F]" />
+              <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
             </div>
           ) : error ? (
             <div className="text-center py-16 text-white">

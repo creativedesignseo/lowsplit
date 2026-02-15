@@ -69,18 +69,13 @@ const Navbar = () => {
   }
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 shadow-md" style={{ background: '#EF534F' }}>
+    <nav className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 shadow-md bg-primary-500">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-[64px]">
           
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-colors">
-              <span className="text-white font-black text-xl">L</span>
-            </div>
-            <span className="text-white uppercase font-black text-base tracking-wider hidden sm:block">
-              LowSplit
-            </span>
+            <img src="/Logo-lowsplit.svg" alt="LowSplit" className="h-6 w-auto hover:opacity-90 transition-opacity" />
           </Link>
 
           {/* Desktop Navigation */}
@@ -93,9 +88,9 @@ const Navbar = () => {
                   key={link.to}
                   to={link.to}
                   className={`flex items-center gap-2 px-5 py-2 rounded-full font-bold text-sm transition-all
-                    ${isActive ? 'bg-white text-[#EF534F] shadow-sm' : 'text-white hover:bg-white/10'}`}
+                    ${isActive ? 'bg-white text-primary-500 shadow-sm' : 'text-white hover:bg-white/10'}`}
                 >
-                  <IconComponent className={`w-4 h-4 ${isActive ? 'text-[#EF534F]' : 'text-white'}`} strokeWidth={2.5} />
+                  <IconComponent className={`w-4 h-4 ${isActive ? 'text-primary-500' : 'text-white'}`} strokeWidth={2.5} />
                   <span className="">{link.label}</span>
                 </Link>
               )
@@ -171,7 +166,7 @@ const Navbar = () => {
                           >
                               <div>
                                   <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">Saldo Disponible</p>
-                                  <p className="text-lg font-black text-[#EF534F]">
+                                  <p className="text-lg font-black text-primary-500">
                                     €{balance !== undefined ? balance.toFixed(2) : '0.00'}
                                   </p>
                               </div>
@@ -241,7 +236,7 @@ const Navbar = () => {
             ) : (
               <Link 
                 to="/login"
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-[#EF534F] font-bold text-sm hover:bg-white/90 transition-all shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-primary-500 font-bold text-sm hover:bg-white/90 transition-all shadow-sm"
               >
                 <User className="w-4 h-4" />
                 <span>Acceder</span>
@@ -261,7 +256,7 @@ const Navbar = () => {
 
       {/* Mobile menu */}
       {isOpen && (
-        <div className="md:hidden border-t border-white/10" style={{ background: '#EF534F' }}>
+        <div className="md:hidden border-t border-white/10 bg-primary-500">
           <div className="px-4 py-3 space-y-1">
             {navLinks.map((link) => {
               const IconComponent = link.icon
@@ -356,7 +351,7 @@ const Navbar = () => {
               <Link 
                 to="/login"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white text-[#EF534F] font-bold text-sm hover:bg-white/90 transition-all shadow-sm mx-1"
+                className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white text-primary-500 font-bold text-sm hover:bg-white/90 transition-all shadow-sm mx-1"
               >
                 <User className="w-4 h-4" />
                 <span>Iniciar Sesión / Registrarse</span>

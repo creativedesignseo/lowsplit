@@ -38,12 +38,7 @@ const LoginPage = () => {
           <div className="w-full max-w-md">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 mb-8">
-              <div className="w-8 h-8 rounded-xl bg-primary-500 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">
-                Low<span className="text-primary-500">Split</span>
-              </span>
+              <img src="/Logo-lowsplit.svg" alt="LowSplit" className="h-8 w-auto" />
             </Link>
 
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Accede con</h1>
@@ -145,10 +140,7 @@ const LoginPage = () => {
         <div className="hidden lg:flex flex-1 bg-purple-600 items-center justify-center">
           <div className="text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                <Zap className="w-7 h-7 text-white" />
-              </div>
-              <span className="text-3xl font-bold text-white">LowSplit</span>
+              <img src="/Logo-lowsplit.svg" alt="LowSplit" className="h-16 w-auto invert grayscale-0 brightness-0" style={{ filter: 'brightness(0) invert(1)' }} />
             </div>
             <p className="text-white/80 text-lg max-w-xs">
               Comparte suscripciones de forma segura y ahorra hasta un 75%
