@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { Zap, Eye, EyeOff } from 'lucide-react'
+import { Zap, Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { supabase } from '../lib/supabase'
@@ -34,8 +34,19 @@ const LoginPage = () => {
 
       <div className="min-h-screen flex">
         {/* Left side - Form */}
-        <div className="flex-1 flex items-center justify-center p-8 bg-white">
-          <div className="w-full max-w-md">
+        <div className="flex-1 flex items-center justify-center p-8 bg-white relative">
+          {/* Back Button */}
+          <Link 
+            to="/" 
+            className="absolute top-8 left-8 flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors group"
+          >
+            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-gray-100 transition-colors">
+              <ArrowLeft className="w-4 h-4" />
+            </div>
+            <span className="text-sm font-medium">Volver</span>
+          </Link>
+
+          <div className="w-full max-w-md mt-10 lg:mt-0">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 mb-8">
               <img src="/Logo-lowsplit-light.svg" alt="LowSplit" className="h-8 w-auto" />

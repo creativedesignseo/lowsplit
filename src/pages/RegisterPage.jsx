@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { Zap, Eye, EyeOff, Check, Mail } from 'lucide-react'
+import { Zap, Eye, EyeOff, Check, Mail, ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
@@ -43,22 +43,22 @@ const RegisterPage = () => {
       </Helmet>
 
       <div className="min-h-screen flex">
-        {/* Left side - Branding */}
-        <div className="hidden lg:flex flex-1 bg-primary-500 items-center justify-center">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-3 mb-4">
-                <img src="/Logo-lowsplit.svg" alt="LowSplit" className="h-16 w-auto" />
+        {/* Left side - Form */}
+        <div className="flex-1 flex items-center justify-center p-8 bg-white relative">
+          
+          {/* Back Button */}
+          <Link 
+            to="/" 
+            className="absolute top-8 left-8 flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors group"
+          >
+            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center group-hover:bg-gray-100 transition-colors">
+              <ArrowLeft className="w-4 h-4" />
             </div>
-            <p className="text-white/80 text-lg max-w-xs">
-              Únete a miles de usuarios que ya ahorran en sus suscripciones
-            </p>
-          </div>
-        </div>
+            <span className="text-sm font-medium">Volver</span>
+          </Link>
 
-        {/* Right side - Form */}
-        <div className="flex-1 flex items-center justify-center p-8 bg-white">
-          <div className="w-full max-w-md">
-            {/* Logo */}
+          <div className="w-full max-w-md mt-10 lg:mt-0">
+            {/* Logo (Mobile only) */}
             <Link to="/" className="flex items-center gap-2 mb-8 lg:hidden">
               <img src="/Logo-lowsplit.svg" alt="LowSplit" className="h-8 w-auto" />
             </Link>
@@ -191,6 +191,18 @@ const RegisterPage = () => {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Right side - Branding */}
+        <div className="hidden lg:flex flex-1 items-center justify-center" style={{ backgroundColor: '#1E293B' }}>
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-3 mb-4">
+                <img src="/Logo-lowsplit.svg" alt="LowSplit" className="h-16 w-auto" />
+            </div>
+            <p className="text-white/80 text-lg max-w-xs">
+              Únete a miles de usuarios que ya ahorran en sus suscripciones
+            </p>
           </div>
         </div>
       </div>
