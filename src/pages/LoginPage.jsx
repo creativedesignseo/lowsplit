@@ -38,7 +38,7 @@ const LoginPage = () => {
           <div className="w-full max-w-md">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2 mb-8">
-              <img src="/Logo-lowsplit.svg" alt="LowSplit" className="h-8 w-auto" />
+              <img src="/Logo-lowsplit-light.svg" alt="LowSplit" className="h-8 w-auto" />
             </Link>
 
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Accede con</h1>
@@ -89,7 +89,7 @@ const LoginPage = () => {
               {/* Submit Button */}
               <button
                 type="submit"
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-semibold transition-colors"
+                className="w-full bg-primary-500 hover:bg-primary-600 text-white py-3 rounded-xl font-semibold transition-colors"
               >
                 Accede
               </button>
@@ -105,7 +105,7 @@ const LoginPage = () => {
             {/* Register Link */}
             <div className="text-center mt-4">
               <span className="text-gray-500 text-sm">¿Por primera vez en LowSplit? </span>
-              <Link to="/register" className="text-purple-600 hover:text-purple-700 font-medium text-sm">
+              <Link to="/register" className="text-primary-600 hover:number-700 font-medium text-sm">
                 Regístrate
               </Link>
             </div>
@@ -137,10 +137,10 @@ const LoginPage = () => {
         </div>
 
         {/* Right side - Branding */}
-        <div className="hidden lg:flex flex-1 bg-purple-600 items-center justify-center">
+        <div className="hidden lg:flex flex-1 items-center justify-center" style={{ backgroundColor: '#1E293B' }}>
           <div className="text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <img src="/Logo-lowsplit.svg" alt="LowSplit" className="h-16 w-auto invert grayscale-0 brightness-0" style={{ filter: 'brightness(0) invert(1)' }} />
+              <img src="/Logo-lowsplit.svg" alt="LowSplit" className="h-16 w-auto" />
             </div>
             <p className="text-white/80 text-lg max-w-xs">
               Comparte suscripciones de forma segura y ahorra hasta un 75%

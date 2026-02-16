@@ -47,7 +47,7 @@ const RegisterPage = () => {
         <div className="hidden lg:flex flex-1 bg-primary-500 items-center justify-center">
           <div className="text-center">
             <div className="flex items-center justify-center gap-3 mb-4">
-                <img src="/Logo-lowsplit.svg" alt="LowSplit" className="h-16 w-auto" style={{ filter: 'brightness(0) invert(1)' }} />
+                <img src="/Logo-lowsplit.svg" alt="LowSplit" className="h-16 w-auto" />
             </div>
             <p className="text-white/80 text-lg max-w-xs">
               Únete a miles de usuarios que ya ahorran en sus suscripciones

@@ -29,6 +29,12 @@
 *   **Hosting/CD**: Netlify (Frontend + Functions).
 *   **Version Control**: GitHub.
 
+### **Design System**
+*   **Primary Color**: `#0B1120` (Dark Blue/Black) - Main brand color, used for headers, cards, and primary backgrounds.
+*   **Accent Color**: `#42FDC8` (Mint/Cyan) - Used for primary actions (buttons) and highlights.
+*   **Secondary/Card Color**: `#1E293B` (Dark Slate Blue) - Used for card makeovers and secondary elements.
+*   **Typography**: Inter (Google Fonts).
+
 ---
 
 ## 3. Core Architecture: Payment Flow
