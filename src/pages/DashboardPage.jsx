@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import LinkIcon from 'lucide-react/dist/esm/icons/link'
-// import LogIn from 'lucide-react/dist/esm/icons/log-in' // Unused
+import LogIn from 'lucide-react/dist/esm/icons/log-in'
 import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up'
 import Plus from 'lucide-react/dist/esm/icons/plus'

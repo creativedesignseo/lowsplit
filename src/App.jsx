@@ -12,7 +12,6 @@ import ServiceDetailPage from './pages/ServiceDetailPage'
 import GroupDetailPage from './pages/GroupDetailPage'
 import ShareSubscriptionPage from './pages/ShareSubscriptionPage'
 import WalletPage from './pages/WalletPage'
-import TestPage from './pages/TestPage'
 import MarketplaceListPage from './pages/MarketplaceListPage'
 
 // Layout components
@@ -70,7 +69,6 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          <Route path="/test" element={<TestPage />} />
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>

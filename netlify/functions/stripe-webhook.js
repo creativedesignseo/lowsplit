@@ -1,7 +1,9 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-12-18.acacia',
+});
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -30,12 +32,19 @@ export async function handler(event) {
   }
 
   const sig = event.headers['stripe-signature'];
-  
+
+  // Manejo del body cuando Netlify entrega el payload en base64.
+  // Esto es CRÍTICO: si event.body llega como base64 y se pasa string a constructEvent,
+  // la verificación de firma falla aunque el webhook sea legítimo.
+  const rawBody = event.isBase64Encoded
+    ? Buffer.from(event.body, 'base64')
+    : event.body;
+
   let stripeEvent;
 
   try {
     stripeEvent = stripe.webhooks.constructEvent(
-      event.body,
+      rawBody,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
@@ -50,7 +59,32 @@ export async function handler(event) {
     };
   }
 
+  // Idempotencia: registramos el event.id de Stripe; si ya estaba procesado, devolvemos 200 sin re-ejecutar.
+  // La tabla stripe_events_processed debe crearse con la migración 20260527_p0_hardening.sql antes de desplegar.
+  try {
+    const { error: dedupErr } = await supabase
+      .from('stripe_events_processed')
+      .insert({ event_id: stripeEvent.id });
+    if (dedupErr) {
+      if (dedupErr.code === '23505') { // unique_violation
+        console.log('[stripe-webhook] event already processed', stripeEvent.id);
+        return { statusCode: 200, headers, body: JSON.stringify({ received: true, duplicate: true }) };
+      }
+      throw dedupErr;
+    }
+  } catch (err) {
+    console.error('[stripe-webhook] idempotency check failed', err);
+    // Devolvemos 5xx para que Stripe reintente (la tabla puede no existir aún o haber un fallo transitorio).
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: 'Internal error processing webhook' }),
+    };
+  }
+
   console.log('Received Stripe event type:', stripeEvent.type);
+
+  try {
 
   if (stripeEvent.type === 'checkout.session.completed') {
     const session = stripeEvent.data.object;
@@ -268,9 +302,21 @@ export async function handler(event) {
     } catch (error) {
       console.error('Webhook Runtime Error:', error);
       await logDebug('Runtime Error Catch', { error: error.message, stack: error.stack });
-      // We return 200 to Stripe anyway to avoid repeated retries of failing logic 
-      // since the payment IS recorded in step 3.
+      // Re-lanzamos para que el catch externo devuelva 5xx y Stripe reintente.
+      throw error;
     }
+  }
+
+  // Handlers adicionales — no son fulfillment, solo logging/alertas por ahora.
+  if (stripeEvent.type === 'payment_intent.payment_failed') {
+    console.warn('[stripe-webhook] payment_intent.payment_failed', stripeEvent.data.object.id);
+    // TODO: notificar al usuario, marcar transaction como 'failed' si existe
+  } else if (stripeEvent.type === 'charge.refunded') {
+    console.warn('[stripe-webhook] charge.refunded', stripeEvent.data.object.id);
+    // TODO: revocar membership asociada, registrar refund en payment_transactions
+  } else if (stripeEvent.type === 'charge.dispute.created') {
+    console.error('[stripe-webhook] CHARGEBACK', stripeEvent.data.object.id);
+    // TODO: alertar a admin, revocar membership
   }
 
   return {
@@ -278,4 +324,15 @@ export async function handler(event) {
     headers,
     body: JSON.stringify({ received: true })
   };
+
+  } catch (err) {
+    console.error('[stripe-webhook] fatal error', err);
+    // Devolver 5xx para que Stripe reintente. Solo devolver 200 si el error es no recuperable
+    // (firma inválida, formato corrupto) que ya está manejado arriba.
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ error: 'Internal error processing webhook' }),
+    };
+  }
 }

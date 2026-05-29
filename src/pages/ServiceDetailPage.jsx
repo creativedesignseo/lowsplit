@@ -59,13 +59,20 @@ const ServiceDetailPage = () => {
   // Handle Stripe Checkout
   const handlePayment = async () => {
     if (!selectedPlan || !service) return
-    
+
     setIsProcessingPayment(true)
     setPaymentError(null)
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      
+
+      // Require authentication before sending payment request
+      if (!session?.user?.id) {
+        setIsProcessingPayment(false)
+        navigate('/login', { state: { from: `/service/${slug}` } })
+        return
+      }
+
       const response = await fetch(
         '/.netlify/functions/create-checkout',
         {
@@ -75,9 +82,9 @@ const ServiceDetailPage = () => {
             serviceName: service.name,
             priceAmount: selectedPlan.totalPrice,
             months: selectedPlan.months,
-            userEmail: session?.user?.email || null,
-            userId: session?.user?.id || null,
-            groupId: null 
+            userEmail: session.user.email,
+            userId: session.user.id,
+            groupId: null
           })
         }
       )
@@ -212,11 +219,12 @@ const ServiceDetailPage = () => {
                             
                             <div className="h-10 w-px bg-gray-200 hidden sm:block"></div>
 
-                            <button 
+                            <button
                                 onClick={handlePayment}
-                                className="w-full sm:w-auto px-8 py-4 bg-[#EF534F] hover:bg-[#e0403c] text-white rounded-xl font-bold text-lg shadow-xl shadow-red-200 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+                                disabled={isProcessingPayment}
+                                className="w-full sm:w-auto px-8 py-4 bg-[#EF534F] hover:bg-[#e0403c] text-white rounded-xl font-bold text-lg shadow-xl shadow-red-200 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
                             >
-                                Unirme Ahora
+                                {isProcessingPayment ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Unirme Ahora'}
                             </button>
                         </div>
                         
@@ -280,7 +288,8 @@ const ServiceDetailPage = () => {
         </div>
       </div>
 
-      {/* Bizum Modal */}
+      {/* Bizum desactivado — pendiente integración real */}
+      {/*
       {showBizumModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in duration-300">
@@ -290,7 +299,7 @@ const ServiceDetailPage = () => {
                     </div>
                     <h3 className="text-2xl font-black text-gray-900 mb-2">Pagar con Bizum</h3>
                     <p className="text-gray-500 mb-6">Envía el importe exacto al siguiente número para activar tu suscripción.</p>
-                    
+
                     <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
                         <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">NÚMERO BIZUM</p>
                         <p className="text-3xl font-black text-gray-900 tracking-wider mb-2 select-all">+34 600 000 000</p>
@@ -299,14 +308,14 @@ const ServiceDetailPage = () => {
                     </div>
 
                     <div className="space-y-3">
-                        <button 
+                        <button
                             onClick={handleBizumPayment}
                             disabled={isProcessingPayment}
                             className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
                         >
                             {isProcessingPayment ? <Loader2 className="w-5 h-5 animate-spin" /> : 'He enviado el pago'}
                         </button>
-                        <button 
+                        <button
                             onClick={() => setShowBizumModal(false)}
                             className="w-full py-3 text-gray-500 font-medium hover:text-gray-800"
                         >
@@ -317,6 +326,7 @@ const ServiceDetailPage = () => {
             </div>
         </div>
       )}
+      */}
     </>
   )
 }
