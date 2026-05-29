@@ -1,7 +1,23 @@
 # HANDOFF.md — LowSplit
 
 > Estado para retomar el trabajo en una sesión nueva sin perder contexto.
-> Última actualización: 2026-05-29 (re-auditoría post Fase 0 — 13 agentes)
+> Última actualización: 2026-05-29 (Ola 1 código hecho + intento de migración SQL)
+
+## 🔴 DÓNDE LO DEJAMOS (leer esto primero)
+
+**Ola 1 (Activación) — código:** ✅ HECHO, commiteado y pusheado (commits `7c26f03` y posteriores en `fix/p0-production-readiness`). Repara pagos (header JWT), wallet v2, 404, limpia Bizum, success_url. Build verde.
+
+**Migración SQL en Supabase:** ⏳ INTENTADA, FALLÓ, NADA aplicado (es transaccional, revirtió todo).
+- `20260527_p0_hardening.sql` falla en el bloque C: el `CHECK (slots_occupied <= max_slots)` lo viola **1 grupo sobrevendido**:
+  - `id = 288af1e2-db57-457f-a48d-e3afb680bf2c` → `slots_occupied=5`, `max_slots=4` (1 de más), status `available`, creado 30-ene-2026 (probable dato de pruebas).
+- **PENDIENTE para retomar:** (1) contar miembros reales pagados de ese grupo, (2) corregir el dato (si miembros≤4 → `UPDATE slots_occupied` al número real; si =5 → subir `max_slots` a 5 o sacar a alguien), (3) re-ejecutar `20260527_p0_hardening.sql`, (4) ejecutar bloque de verificación, (5) aplicar `20260529_wallet_hardening.sql` (migración 2/2).
+- Query de diagnóstico pendiente de confirmar (el usuario reportó "Success. No rows returned", ambiguo — re-verificar con `SELECT count(*) FROM subscription_groups WHERE slots_occupied > max_slots`).
+
+**Tras aplicar ambas migraciones:** mergear PR #1 → deploy Netlify → verificar pagos en Stripe test mode. Luego SSL Cloudflare "Full strict", registrar webhook Stripe, env vars.
+
+**Recordatorio:** email de registro no llega → config SMTP en Supabase (Auth → Email), no es código. Anotado para Ola 1/activación.
+
+---
 
 ## Resumen del estado actual
 
