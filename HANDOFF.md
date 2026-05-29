@@ -1,13 +1,19 @@
 # HANDOFF.md — LowSplit
 
 > Estado para retomar el trabajo en una sesión nueva sin perder contexto.
-> Última actualización: 2026-05-27 (sesión de auditoría + Fase 0 + DNS)
+> Última actualización: 2026-05-29 (re-auditoría post Fase 0 — 13 agentes)
 
 ## Resumen del estado actual
 
-LowSplit fue **auditado** (10 áreas, score **8/100 — 🛑 BLOCKED para producción**). Se aplicó la **Fase 0 (Stop the Bleed)** del roadmap: se corrigieron los 7 vectores de fraude P0 y los crashes principales. Los cambios están en la rama **`fix/p0-production-readiness`**, **SIN commitear todavía**. La build pasa (`npm run build` ✅). En paralelo se migró el DNS de `lowsplit.com` a Netlify (el sitio está vivo con HTTPS).
+LowSplit fue **re-auditado** con 13 agentes (`saas-audit` full) sobre la rama `fix/p0-production-readiness`. Resultado en `AUDIT_REPORT.md`. **Score: producción 8/100 (sin cambios), código en rama ~12/100, proyectado tras activación ~55/100.** Sigue 🛑 BLOQUEADO.
 
-**El proyecto NO está aún en producción segura** porque falta: aplicar la migración SQL en Supabase, commitear+desplegar el código, y completar Fases 1-2 del roadmap.
+**Hallazgo clave de la re-auditoría:** la Fase 0 es **correcta a nivel de código** (los 7 P0 originales cerrados en backend), PERO:
+1. **No está activa:** la migración SQL NO se aplicó en Supabase y el PR #1 no se mergeó → la BD viva y el sitio siguen vulnerables.
+2. **REGRESIÓN crítica (PAY-101):** el backend exige JWT pero el frontend **no envía el header `Authorization`** → el pago con tarjeta y la recarga devuelven **401 al 100%**. Los pagos están ROTOS.
+3. **Pago wallet manipulable (PAY-102):** `handle_join_group_wallet` se llama desde el cliente con `p_amount` controlado y sin binding `auth.uid()`.
+4. **Legal (auditado por 1ª vez): 3 críticos** — credenciales en texto plano, sin páginas legales (404), sin derecho al olvido.
+
+**El camino a producción es ahora un checklist corto** (Fase 0.5 de activación, ver TODO.md), no trabajo profundo.
 
 ## Qué estábamos haciendo antes de cambiar de chat
 
@@ -38,19 +44,29 @@ La decisión inmediata pendiente era: **¿qué camino seguir?** (A: cerrar Fase 
 ### Otro repo (ya commiteado + pusheado)
 - Skill `saas-audit` creada en `creativedesignseo/my-dev-toolkits/skills/saas-audit/` (commit `f882696`). No afecta a este repo.
 
-## Problemas abiertos / bugs conocidos
+## Problemas abiertos / bugs conocidos (actualizado tras re-auditoría — ver AUDIT_REPORT.md)
 
 | # | Problema | Severidad | Estado |
 |---|----------|-----------|--------|
-| 1 | Migración SQL P0 NO aplicada en Supabase | 🔴 Crítico | Pendiente — el código del webhook espera la tabla `stripe_events_processed` |
-| 2 | Credenciales de cuentas en TEXTO PLANO en `subscription_groups` | 🔴 Crítico | Pendiente Fase 1 (cifrado + tabla aparte) |
-| 3 | `npm run lint` roto (falta `eslint.config.js`) | 🟠 Alto | Pendiente |
-| 4 | Sin SEO (noindex en vivo, sin sitemap/robots/OG) | 🟠 Alto | noindex se quita al desplegar; resto pendiente Fase 1 |
-| 5 | Pago híbrido descuenta saldo antes de confirmar Stripe | 🟠 Alto | Pendiente Fase 1 |
-| 6 | `handle_partial_wallet_payment`, `handle_join_group_card`, `increment_group_slots` no versionadas en repo | 🟠 Alto | Pendiente — volcar desde Supabase |
-| 7 | `/forgot-password` enlazado pero ruta inexistente; sin catch-all 404 | 🟡 Medio | Pendiente |
-| 8 | Páginas monolito (DashboardPage 915 líneas) | 🟡 Medio | Pendiente Fase 2 |
-| 9 | Sin tests | 🟡 Medio | Pendiente Fase 2 |
+| C1 | Migración SQL P0 NO aplicada en Supabase (raíz de 6 hallazgos) | 🔴 Crítico | Pendiente — acción #1 |
+| C2 | **REGRESIÓN: frontend no envía header `Authorization` → pagos 401** (PAY-101) | 🔴 Crítico | Nuevo — los 4 fetch de pago/recarga |
+| C3 | Pago wallet manipulable: RPC desde cliente con `p_amount` y sin `auth.uid()` (PAY-102) | 🔴 Crítico | Pendiente |
+| C4 | Credenciales de cuentas en TEXTO PLANO en `subscription_groups` | 🔴 Crítico | Pendiente Fase 1 (cifrado) |
+| C5 | `/forgot-password` inexistente + sin catch-all 404 → pantalla blanca (QA-014) | 🔴 Crítico | Pendiente |
+| C6 | RPCs `handle_partial_wallet_payment`/`handle_join_group_card`/`increment_group_slots` no versionadas | 🔴 Crítico | Pendiente — volcar desde Supabase |
+| C7 | Sin páginas legales: `/terms`,`/privacy`,`/refund` dan 404 (LEGAL-002) | 🔴 Crítico | Nuevo — requiere abogado para contenido |
+| C8 | Botón "Eliminar cuenta" sin `onClick` → sin derecho al olvido RGPD (LEGAL-003) | 🔴 Crítico | Nuevo |
+| C9 | Regresión Bizum: `ServiceDetailPage:111` llama a `manual-payment` (borrado) | 🟠 Alto | Nuevo — código muerto |
+| H1 | Funciones admin fuera del hardening (CORS `*`, `setRole` accesible a admin normal) | 🟠 Alto | Nuevo |
+| H2 | `npm run lint` roto (falta `eslint.config.js`) | 🟠 Alto | Pendiente |
+| H3 | SEO: sin sitemap/robots/OG (noindex ✅ ya eliminado) | 🟠 Alto | Pendiente Fase 1 |
+| M1 | `success_url` desajustado (`payment=success` vs `success=true`) | 🟡 Medio | Nuevo — notif post-pago no dispara |
+| M2 | Reputación falsa hardcodeada "99.04%" + "verificado" universal (dark pattern DSA) | 🟡 Medio | Nuevo |
+| M3 | Sistema de diseño roto: `primary-500` azul, rojo hardcoded 124×, sin `<Button>`, 17 `alert()` | 🟡 Medio | Pendiente Fase 2 |
+| M4 | `.agent/`+`.agents/` (240+ archivos) commiteados al repo público; deps muertas (`zod`,`@hookform/resolvers`) | 🟡 Medio | Nuevo |
+| M5 | Páginas monolito (Dashboard 915), sin tests, sin TS, sin AuthProvider/ProtectedRoute/ErrorBoundary | 🟡 Medio | Pendiente Fase 2 |
+
+> **Nota:** muchos C1-C6 son "fix escrito, pendiente de activar". La distancia a producción es el checklist de Fase 0.5 en TODO.md, no trabajo profundo.
 
 ## Próximos pasos recomendados (en orden)
 

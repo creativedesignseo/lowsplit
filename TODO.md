@@ -2,7 +2,28 @@
 
 > Tareas pendientes priorizadas. Estados: ⬜ pendiente · 🟦 en progreso · 🟥 bloqueada · ✅ hecha
 > Prioridad: 🔴 alta · 🟡 media · 🟢 baja
-> Última actualización: 2026-05-27
+> Última actualización: 2026-05-29 (tras re-auditoría 13 agentes — ver AUDIT_REPORT.md)
+
+---
+
+## ⚡ FASE 0.5 — ACTIVACIÓN (1-2 días) — convierte la Fase 0 en efectiva
+
+> La Fase 0 está escrita pero NO activa. Estas tareas la activan y reparan las regresiones detectadas en la re-auditoría. Tras completarlas, score proyectado ~55/100.
+
+| Estado | Prio | Tarea | Archivos | Notas |
+|--------|------|-------|----------|-------|
+| ⬜ | 🔴 | **C1: Aplicar `20260527_p0_hardening.sql` en Supabase** | `database/migrations/` | Backup + SQL Editor + verificación. Desbloquea 6 hallazgos. Acción #1. |
+| ⬜ | 🔴 | **C2: Añadir header `Authorization: Bearer` en los 4 fetch** | `GroupDetailPage.jsx:142,179`, `ServiceDetailPage.jsx:76`, `RechargeModal.jsx:14` | REGRESIÓN — pagos dan 401. `headers:{Authorization:\`Bearer ${session.access_token}\`}` |
+| ⬜ | 🔴 | **C3: Bindear `auth.uid()` + recálculo en pago wallet** | RPC `handle_join_group_wallet`, `GroupDetailPage.jsx:115` | O mover a función serverless con requireAuth |
+| ⬜ | 🔴 | **C6: Versionar 3 RPCs fantasma** | `database/migrations/` | `handle_partial_wallet_payment`, `handle_join_group_card`, `increment_group_slots` (volcar de Supabase + search_path + REVOKE) |
+| ⬜ | 🔴 | **C5: Catch-all 404 + página `/forgot-password`** | `src/App.jsx`, nueva página | `<Route path="*">` + `resetPasswordForEmail` |
+| ⬜ | 🟠 | **C9: Eliminar regresión Bizum** | `src/pages/ServiceDetailPage.jsx:111` | Borrar `handleBizumPayment` + modal comentado |
+| ⬜ | 🟡 | **M1: Unificar `success_url`** (`payment=success`→`success=true`) | `netlify/functions/create-checkout.js:97` | Notif post-pago no dispara |
+| ⬜ | 🔴 | **Mergear PR #1 + verificar deploy** | — | ORDEN: SQL primero, deploy después |
+| ⬜ | 🔴 | Verificar env vars secretas en Netlify | Netlify Site settings | STRIPE_SECRET/WEBHOOK, SERVICE_ROLE |
+| ⬜ | 🔴 | Registrar webhook Stripe | Stripe Dashboard | `https://lowsplit.com/.netlify/functions/stripe-webhook` |
+| ⬜ | 🔴 | SSL/TLS Cloudflare → "Full (strict)" | dashboard Cloudflare | Manual, 1 clic |
+| ⬜ | 🟡 | Rotar token Cloudflare (quedó en chat) | `~/.claude/credentials/cloudflare.env` | — |
 
 ---
 
