@@ -1,27 +1,82 @@
 # HANDOFF.md — LowSplit
 
 > Estado para retomar el trabajo en una sesión nueva sin perder contexto.
-> Última actualización: 2026-05-29 (Ola 1 código hecho + intento de migración SQL)
+> Última actualización: 2026-05-29 (Ola 1 en prod: webhook Stripe + Auth URLs corregidos)
 
 ## 🟢 DÓNDE LO DEJAMOS (leer esto primero)
 
-**Ola 1 (Activación) — código:** ✅ HECHO, commiteado y pusheado en `fix/p0-production-readiness`. Repara pagos (header JWT), wallet v2, 404, limpia Bizum, success_url. Build verde.
+**Ola 1 (Activación):** ✅ **EN PRODUCCIÓN.** PR #1 mergeado y desplegado. El
+código con headers JWT, wallet v2, 404, Bizum limpio y success_url ya está en vivo.
 
 **Migraciones SQL en Supabase:** ✅ **AMBAS APLICADAS** (vía Supabase Management API):
 - `20260527_p0_hardening.sql` → aplicada, checks A-H ✅. Se corrigió el bloque H (firmas reales) y se arregló el grupo sobrevendido `288af1e2-…-457b` (subido `max_slots`=5).
 - `20260529_wallet_hardening.sql` → aplicada. `handle_join_group_wallet_v2` creada (SECURITY DEFINER + search_path + GRANT authenticated).
 
-**Acceso Supabase:** token Management API en `~/.claude/credentials/supabase.env` (ref `fvycpwfzolzchlwwqafr`). Supabase CLI **linkeado**. `db pull`/`db dump` requieren Docker (colima parado) → se usó la Management API vía curl.
+**Corregido hoy (config de producción que estaba rota):**
+- ✅ **Webhook Stripe.** Apuntaba a `https://lowsplit.netlify.app/...` que devuelve **404 (dominio muerto)** → los eventos de pago nunca llegaban a la función → un pago con tarjeta cobraba pero NO otorgaba acceso. Corregido a `https://lowsplit.com/.netlify/functions/stripe-webhook` (responde 400 = sano) y ampliado de 1 a 4 eventos. Endpoint id `we_1Suq56GtkBSGwZr1NWNeJFlZ`. El signing secret NO cambió (se actualizó el endpoint existente).
+- ✅ **Auth URLs de Supabase.** site_url y allow list apuntaban al subdominio viejo `lowsplit-app.netlify.app` → los enlaces de confirmación/reset de email iban al dominio equivocado. Corregido vía Management API: site_url → `https://lowsplit.com`; allow list → `lowsplit.com/**, www.lowsplit.com/**, lowsplit-app.netlify.app/**, localhost:5173/**`.
+
+**Emails de Auth (diseño):** ✅ rediseñados con la marca real. Logo PNG (`public/logo-email.png`, desde `Logo-lowsplit-light.svg`) alojado en Supabase Storage bucket público `branding` (`https://fvycpwfzolzchlwwqafr.supabase.co/storage/v1/object/public/branding/logo-email.png`). Botón navy `#0B1120` (primary-500), píldora. Asuntos en español. Las 4 plantillas (confirmación, reset, magic link, cambio email) aplicadas vía Management API. Generador versionado en `supabase/email-templates/apply-templates.py` (+ README). ⚠️ SMTP propio sigue SIN configurar → límite ~3-4/h (Arreglo 2 pendiente, Resend).
 
 **C6 cerrado:** las 15 RPCs reales (las 3 "fantasma" + v2 + 5 más que no estaban en el repo) capturadas en `supabase/schema-snapshots/real-functions-20260529.sql`. **Dato clave:** la BD remota tiene 11 migraciones de la historia original (Lovable/CLI ene-feb 2026) que nunca estuvieron en el repo — origen del drift.
 
 **PRÓXIMO PASO (cierre de Ola 1):**
-1. Mergear PR #1 → deploy Netlify (el código con headers JWT debe llegar a prod para que los pagos funcionen).
-2. Verificar las 3 env vars secretas en Netlify + registrar webhook Stripe en `https://lowsplit.com/.netlify/functions/stripe-webhook`.
-3. SSL Cloudflare → "Full strict". 4. Probar pago end-to-end (Stripe test mode).
-5. **Rotar tokens** (Cloudflare + Supabase) — están en el historial del chat.
+1. **Verificar `STRIPE_WEBHOOK_SECRET` en Netlify == signing secret del endpoint.** Es lo único entre "webhook con URL correcta" y "pagos OK end-to-end". Si no coincide, la función rechaza todo con 400.
+2. **Configurar SMTP (Arreglo 2)** en Supabase → Auth → SMTP (Resend recomendado) para que lleguen los emails de registro/reset. Requiere cuenta del usuario + verificar dominio (DNS en Cloudflare lo puede hacer Claude).
+3. **SSL Cloudflare → "Full strict"** (dashboard, manual).
+4. **Probar pago end-to-end** (Stripe test mode).
+5. **Rotar tokens** (Cloudflare + Supabase).
 
-**Recordatorio:** email de registro no llega → config SMTP en Supabase (Auth → Email), no es código.
+---
+
+## 🔑 ACCESOS E INFRAESTRUCTURA (para no adivinar)
+
+> Dónde está cada credencial y cómo se usa. **Nunca** pegar tokens en el chat;
+> viven en archivos `chmod 600` fuera del repo. Esta tabla dice qué archivo usar.
+
+### Credenciales (archivos locales, NO en el repo)
+
+| Servicio | Archivo | Qué contiene / cómo usar |
+|----------|---------|--------------------------|
+| **Supabase** (Management API) | `~/.claude/credentials/supabase.env` | Token de cuenta de LowSplit. Cargar con `set -a; source ~/.claude/credentials/supabase.env; set +a` y usar `$SUPABASE_ACCESS_TOKEN`. ⚠️ El token de `~/.supabase/tokens/menucast` es de OTRA cuenta y da **403** para LowSplit. |
+| **Cloudflare** (DNS:Edit) | `~/.claude/credentials/cloudflare.env` | Token con permiso Zone:DNS:Edit (NO Zone Settings:Edit → por eso SSL mode se cambia a mano en el dashboard). |
+| **Stripe** | Stripe CLI (`stripe`) | Ya configurado con la cuenta `acct_1Eg4WWGtkBSGwZr1` (la misma de Adspubli — LowSplit comparte cuenta Stripe). Usar `stripe ... --live`. Restricted key `rk_live` caduca 2026-08-16. |
+| **Netlify** | Netlify CLI (`netlify`) | Autenticado como `creativedesignseo@gmail.com` (equipo AdsPubli). Free tier: no permite `scopes` en env vars. |
+
+### IDs y referencias rápidas
+
+| Recurso | Valor |
+|---------|-------|
+| Supabase project ref | `fvycpwfzolzchlwwqafr` |
+| Netlify site | `lowsplit-app` · ID `9c303714-eabd-4ce2-98df-de930ba7bca1` · https://app.netlify.com/projects/lowsplit-app |
+| Cloudflare zona | `lowsplit.com` · ID `6788d2a72bb81784332928acae11e5f2` |
+| Stripe cuenta | `acct_1Eg4WWGtkBSGwZr1` (compartida con Adspubli) |
+| Stripe webhook endpoint | `we_1Suq56GtkBSGwZr1NWNeJFlZ` → `https://lowsplit.com/.netlify/functions/stripe-webhook` |
+| Repo | https://github.com/creativedesignseo/lowsplit (público) |
+
+### Cómo correr SQL contra Supabase (sin Docker)
+
+Docker/colima suele estar parado, así que `supabase db pull/dump` falla. Usar la
+**Management API** vía curl (query arbitraria):
+
+```bash
+set -a; source ~/.claude/credentials/supabase.env; set +a
+curl -s -X POST "https://api.supabase.com/v1/projects/fvycpwfzolzchlwwqafr/database/query" \
+  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"SELECT 1;"}'
+```
+
+Config de Auth (site_url, allow list, SMTP) se lee/escribe en:
+`GET|PATCH https://api.supabase.com/v1/projects/fvycpwfzolzchlwwqafr/config/auth`
+
+### Qué significa la URL del webhook
+
+`https://lowsplit.com/.netlify/functions/stripe-webhook` = Netlify expone cada
+archivo de `netlify/functions/` bajo `/.netlify/functions/<nombre>`. Stripe hace
+POST ahí cuando hay eventos de pago; la función verifica firma + idempotencia y
+otorga acceso. Si la URL está mal, Stripe llama a una puerta inexistente y el
+acceso nunca se concede.
 
 ---
 
@@ -70,19 +125,22 @@ La decisión inmediata pendiente era: **¿qué camino seguir?** (A: cerrar Fase 
 
 | # | Problema | Severidad | Estado |
 |---|----------|-----------|--------|
-| C1 | Migración SQL P0 NO aplicada en Supabase (raíz de 6 hallazgos) | 🔴 Crítico | Pendiente — acción #1 |
-| C2 | **REGRESIÓN: frontend no envía header `Authorization` → pagos 401** (PAY-101) | 🔴 Crítico | Nuevo — los 4 fetch de pago/recarga |
-| C3 | Pago wallet manipulable: RPC desde cliente con `p_amount` y sin `auth.uid()` (PAY-102) | 🔴 Crítico | Pendiente |
-| C4 | Credenciales de cuentas en TEXTO PLANO en `subscription_groups` | 🔴 Crítico | Pendiente Fase 1 (cifrado) |
-| C5 | `/forgot-password` inexistente + sin catch-all 404 → pantalla blanca (QA-014) | 🔴 Crítico | Pendiente |
-| C6 | RPCs `handle_partial_wallet_payment`/`handle_join_group_card`/`increment_group_slots` no versionadas | 🔴 Crítico | Pendiente — volcar desde Supabase |
-| C7 | Sin páginas legales: `/terms`,`/privacy`,`/refund` dan 404 (LEGAL-002) | 🔴 Crítico | Nuevo — requiere abogado para contenido |
-| C8 | Botón "Eliminar cuenta" sin `onClick` → sin derecho al olvido RGPD (LEGAL-003) | 🔴 Crítico | Nuevo |
-| C9 | Regresión Bizum: `ServiceDetailPage:111` llama a `manual-payment` (borrado) | 🟠 Alto | Nuevo — código muerto |
-| H1 | Funciones admin fuera del hardening (CORS `*`, `setRole` accesible a admin normal) | 🟠 Alto | Nuevo |
+| C1 | Migración SQL P0 NO aplicada en Supabase (raíz de 6 hallazgos) | 🔴 Crítico | ✅ RESUELTO — ambas migraciones aplicadas |
+| C2 | **REGRESIÓN: frontend no envía header `Authorization` → pagos 401** (PAY-101) | 🔴 Crítico | ✅ RESUELTO — headers añadidos, en prod |
+| C3 | Pago wallet manipulable: RPC desde cliente con `p_amount` y sin `auth.uid()` (PAY-102) | 🔴 Crítico | ✅ RESUELTO — `handle_join_group_wallet_v2` (auth.uid + recálculo) |
+| C4 | Credenciales de cuentas en TEXTO PLANO en `subscription_groups` | 🔴 Crítico | Pendiente Ola 2 (cifrado) |
+| C5 | `/forgot-password` inexistente + sin catch-all 404 → pantalla blanca (QA-014) | 🔴 Crítico | ✅ RESUELTO — página + catch-all en prod |
+| C6 | RPCs `handle_partial_wallet_payment`/`handle_join_group_card`/`increment_group_slots` no versionadas | 🔴 Crítico | ✅ RESUELTO — capturadas en schema-snapshots |
+| C7 | Sin páginas legales: `/terms`,`/privacy`,`/refund` dan 404 (LEGAL-002) | 🔴 Crítico | Pendiente Ola 2 — requiere abogado para contenido |
+| C8 | Botón "Eliminar cuenta" sin `onClick` → sin derecho al olvido RGPD (LEGAL-003) | 🔴 Crítico | Pendiente Ola 2 |
+| C9 | Regresión Bizum: `ServiceDetailPage:111` llama a `manual-payment` (borrado) | 🟠 Alto | ✅ RESUELTO — Bizum limpiado, en prod |
+| C10 | **Webhook Stripe apuntaba a dominio muerto (404)** → pago no otorga acceso | 🔴 Crítico | ✅ RESUELTO hoy — URL→lowsplit.com + 4 eventos |
+| C11 | **Auth URLs Supabase apuntaban al subdominio viejo** → emails con enlace erróneo | 🟠 Alto | ✅ RESUELTO hoy — site_url + allow list a lowsplit.com |
+| H1 | Funciones admin fuera del hardening (CORS `*`, `setRole` accesible a admin normal) | 🟠 Alto | Pendiente Ola 2 |
 | H2 | `npm run lint` roto (falta `eslint.config.js`) | 🟠 Alto | Pendiente |
 | H3 | SEO: sin sitemap/robots/OG (noindex ✅ ya eliminado) | 🟠 Alto | Pendiente Fase 1 |
-| M1 | `success_url` desajustado (`payment=success` vs `success=true`) | 🟡 Medio | Nuevo — notif post-pago no dispara |
+| H4 | **SMTP no configurado** → emails de registro/reset no llegan (Arreglo 2) | 🟠 Alto | Pendiente — Supabase Auth → SMTP |
+| M1 | `success_url` desajustado (`payment=success` vs `success=true`) | 🟡 Medio | ✅ RESUELTO — en prod |
 | M2 | Reputación falsa hardcodeada "99.04%" + "verificado" universal (dark pattern DSA) | 🟡 Medio | Nuevo |
 | M3 | Sistema de diseño roto: `primary-500` azul, rojo hardcoded 124×, sin `<Button>`, 17 `alert()` | 🟡 Medio | Pendiente Fase 2 |
 | M4 | `.agent/`+`.agents/` (240+ archivos) commiteados al repo público; deps muertas (`zod`,`@hookform/resolvers`) | 🟡 Medio | Nuevo |
@@ -92,15 +150,14 @@ La decisión inmediata pendiente era: **¿qué camino seguir?** (A: cerrar Fase 
 
 ## Próximos pasos recomendados (en orden)
 
-1. **Aplicar `database/migrations/20260527_p0_hardening.sql` en Supabase** (SQL Editor → pegar → Run). Tiene bloque de verificación al final. La fila huérfana que lo bloqueaba ya se borró.
-2. **Commit + push de la rama `fix/p0-production-readiness`** (4 commits lógicos: config/cleanup, frontend, backend, migración — o uno solo).
-3. **Merge a `main`** (PR o directo) → dispara deploy automático en Netlify → el `noindex` desaparece.
-4. **Cambiar SSL/TLS mode en Cloudflare a "Full (strict)"** (dashboard, 1 clic — Claude no tiene permiso con el token actual).
-5. **Registrar webhook Stripe** apuntando a `https://lowsplit.com/.netlify/functions/stripe-webhook` con eventos: `checkout.session.completed`, `payment_intent.payment_failed`, `charge.refunded`, `charge.dispute.created`. Copiar el signing secret a `STRIPE_WEBHOOK_SECRET` en Netlify.
-6. **Verificar env vars en Netlify** (las 3 secretas sobre todo).
-7. **Rotar el token Cloudflare** (quedó en el historial del chat anterior).
-8. **Fase 1**: SEO (sitemap/robots/OG/JSON-LD), cifrado de credenciales, AuthProvider, Error Boundaries, code-splitting, `/forgot-password`.
-9. **Fase 1 UI/UX** (lo que el usuario quería): design system, `<Button>`/`<Modal>` reutilizables, sellos de confianza en checkout, sticky CTA mobile, etc.
+1. **Verificar `STRIPE_WEBHOOK_SECRET` en Netlify** == signing secret del endpoint `we_1Suq56...`. Si no coincide, la función rechaza todo con 400 aunque la URL sea correcta. Es lo único entre "webhook OK" y "pagos OK end-to-end".
+2. **Configurar SMTP (Arreglo 2)** en Supabase → Auth → SMTP (Resend recomendado) → para que lleguen emails de registro/reset. Requiere cuenta del usuario + verificación de dominio (DNS en Cloudflare lo puede hacer Claude).
+3. **Cambiar SSL/TLS mode en Cloudflare a "Full (strict)"** (dashboard, manual — el token no tiene Zone Settings:Edit).
+4. **Verificar las 3 env vars secretas en Netlify** (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY).
+5. **Probar pago end-to-end** (Stripe test mode): tarjeta + wallet, sin 401, acceso solo tras webhook.
+6. **Rotar tokens** Cloudflare + Supabase (quedaron en historial de chats).
+7. **Ola 2 (legal + seguridad):** cifrar credenciales, páginas legales (abogado), borrado de cuenta/RGPD, admin hardening.
+8. **Ola 3 (UI/UX — lo que el usuario quería):** design system, token `primary` (rojo de marca), `<Button>`/`<Modal>`, 17 `alert()`→Toast, tipografía, sellos de confianza en checkout, sticky CTA mobile, SEO base.
 
 ## Archivos que la próxima sesión debe revisar PRIMERO
 
