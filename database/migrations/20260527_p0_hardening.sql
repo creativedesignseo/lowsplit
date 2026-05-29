@@ -287,19 +287,29 @@ GRANT EXECUTE ON FUNCTION public.handle_wallet_topup(UUID, DECIMAL, TEXT, TEXT)
 -- podría redefinir nombres (ej. crear `public.profiles` malicioso en un
 -- schema cargado antes en search_path). Las pinneamos a "public, pg_temp".
 
+-- Firmas verificadas contra la BD real (pg_get_function_identity_arguments).
+-- NOTA: handle_join_group_wallet NO existe en la BD (se sustituye por
+-- handle_join_group_wallet_v2 en la migración 20260529). Las 3 RPCs antes
+-- "fantasma" (card/partial/increment) SÍ existen y se endurecen aquí.
 ALTER FUNCTION public.handle_new_user()
-    SET search_path = public, pg_temp;
-
-ALTER FUNCTION public.handle_wallet_topup(UUID, DECIMAL, TEXT, TEXT)
-    SET search_path = public, pg_temp;
-
-ALTER FUNCTION public.handle_join_group_wallet(UUID, UUID, DECIMAL, TEXT)
     SET search_path = public, pg_temp;
 
 ALTER FUNCTION public.handle_new_wallet()
     SET search_path = public, pg_temp;
 
-ALTER FUNCTION public.get_group_credentials(UUID)
+ALTER FUNCTION public.handle_wallet_topup(uuid, numeric, text, text)
+    SET search_path = public, pg_temp;
+
+ALTER FUNCTION public.get_group_credentials(uuid)
+    SET search_path = public, pg_temp;
+
+ALTER FUNCTION public.handle_join_group_card(uuid, uuid, numeric, numeric, text)
+    SET search_path = public, pg_temp;
+
+ALTER FUNCTION public.handle_partial_wallet_payment(uuid, numeric, text)
+    SET search_path = public, pg_temp;
+
+ALTER FUNCTION public.increment_group_slots(uuid)
     SET search_path = public, pg_temp;
 
 

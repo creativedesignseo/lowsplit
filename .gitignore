@@ -8,3 +8,4 @@ dist
 # Local Netlify folder
 .netlify
 *.zip.saas-audit/
+supabase/.temp/

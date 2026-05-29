@@ -3,19 +3,25 @@
 > Estado para retomar el trabajo en una sesión nueva sin perder contexto.
 > Última actualización: 2026-05-29 (Ola 1 código hecho + intento de migración SQL)
 
-## 🔴 DÓNDE LO DEJAMOS (leer esto primero)
+## 🟢 DÓNDE LO DEJAMOS (leer esto primero)
 
-**Ola 1 (Activación) — código:** ✅ HECHO, commiteado y pusheado (commits `7c26f03` y posteriores en `fix/p0-production-readiness`). Repara pagos (header JWT), wallet v2, 404, limpia Bizum, success_url. Build verde.
+**Ola 1 (Activación) — código:** ✅ HECHO, commiteado y pusheado en `fix/p0-production-readiness`. Repara pagos (header JWT), wallet v2, 404, limpia Bizum, success_url. Build verde.
 
-**Migración SQL en Supabase:** ⏳ INTENTADA, FALLÓ, NADA aplicado (es transaccional, revirtió todo).
-- `20260527_p0_hardening.sql` falla en el bloque C: el `CHECK (slots_occupied <= max_slots)` lo viola **1 grupo sobrevendido**:
-  - `id = 288af1e2-db57-457f-a48d-e3afb680bf2c` → `slots_occupied=5`, `max_slots=4` (1 de más), status `available`, creado 30-ene-2026 (probable dato de pruebas).
-- **PENDIENTE para retomar:** (1) contar miembros reales pagados de ese grupo, (2) corregir el dato (si miembros≤4 → `UPDATE slots_occupied` al número real; si =5 → subir `max_slots` a 5 o sacar a alguien), (3) re-ejecutar `20260527_p0_hardening.sql`, (4) ejecutar bloque de verificación, (5) aplicar `20260529_wallet_hardening.sql` (migración 2/2).
-- Query de diagnóstico pendiente de confirmar (el usuario reportó "Success. No rows returned", ambiguo — re-verificar con `SELECT count(*) FROM subscription_groups WHERE slots_occupied > max_slots`).
+**Migraciones SQL en Supabase:** ✅ **AMBAS APLICADAS** (vía Supabase Management API):
+- `20260527_p0_hardening.sql` → aplicada, checks A-H ✅. Se corrigió el bloque H (firmas reales) y se arregló el grupo sobrevendido `288af1e2-…-457b` (subido `max_slots`=5).
+- `20260529_wallet_hardening.sql` → aplicada. `handle_join_group_wallet_v2` creada (SECURITY DEFINER + search_path + GRANT authenticated).
 
-**Tras aplicar ambas migraciones:** mergear PR #1 → deploy Netlify → verificar pagos en Stripe test mode. Luego SSL Cloudflare "Full strict", registrar webhook Stripe, env vars.
+**Acceso Supabase:** token Management API en `~/.claude/credentials/supabase.env` (ref `fvycpwfzolzchlwwqafr`). Supabase CLI **linkeado**. `db pull`/`db dump` requieren Docker (colima parado) → se usó la Management API vía curl.
 
-**Recordatorio:** email de registro no llega → config SMTP en Supabase (Auth → Email), no es código. Anotado para Ola 1/activación.
+**C6 cerrado:** las 15 RPCs reales (las 3 "fantasma" + v2 + 5 más que no estaban en el repo) capturadas en `supabase/schema-snapshots/real-functions-20260529.sql`. **Dato clave:** la BD remota tiene 11 migraciones de la historia original (Lovable/CLI ene-feb 2026) que nunca estuvieron en el repo — origen del drift.
+
+**PRÓXIMO PASO (cierre de Ola 1):**
+1. Mergear PR #1 → deploy Netlify (el código con headers JWT debe llegar a prod para que los pagos funcionen).
+2. Verificar las 3 env vars secretas en Netlify + registrar webhook Stripe en `https://lowsplit.com/.netlify/functions/stripe-webhook`.
+3. SSL Cloudflare → "Full strict". 4. Probar pago end-to-end (Stripe test mode).
+5. **Rotar tokens** (Cloudflare + Supabase) — están en el historial del chat.
+
+**Recordatorio:** email de registro no llega → config SMTP en Supabase (Auth → Email), no es código.
 
 ---
 
