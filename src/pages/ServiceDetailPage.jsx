@@ -6,7 +6,6 @@ import Loader2 from 'lucide-react/dist/esm/icons/loader-2'
 import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle'
 import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check'
 import Zap from 'lucide-react/dist/esm/icons/zap'
-import Smartphone from 'lucide-react/dist/esm/icons/smartphone'
 import Check from 'lucide-react/dist/esm/icons/check'
 import Store from 'lucide-react/dist/esm/icons/store'
 import { useQuery } from '@tanstack/react-query'
@@ -20,7 +19,6 @@ const ServiceDetailPage = () => {
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [paymentError, setPaymentError] = useState(null)
-  const [showBizumModal, setShowBizumModal] = useState(false)
   const navigate = useNavigate()
 
   // Fetch specific service from Supabase
@@ -77,13 +75,14 @@ const ServiceDetailPage = () => {
         '/.netlify/functions/create-checkout',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
           body: JSON.stringify({
             serviceName: service.name,
             priceAmount: selectedPlan.totalPrice,
             months: selectedPlan.months,
-            userEmail: session.user.email,
-            userId: session.user.id,
             groupId: null
           })
         }
@@ -97,37 +96,6 @@ const ServiceDetailPage = () => {
       setPaymentError(error.message || 'Error al procesar el pago')
     } finally {
       setIsProcessingPayment(false)
-    }
-  }
-
-  // Handle Bizum Payment
-  const handleBizumPayment = async () => {
-    if (!selectedPlan || !service) return
-    setIsProcessingPayment(true)
-    try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) { navigate('/auth'); return }
-
-        const response = await fetch('/.netlify/functions/manual-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: session.user.id,
-                userEmail: session.user.email,
-                serviceName: service.name,
-                amount: selectedPlan.totalPrice,
-                months: selectedPlan.months
-            })
-        })
-        const data = await response.json()
-        if (data.error) throw new Error(data.error)
-        setShowBizumModal(false)
-        navigate('/dashboard?payment=success_bizum')
-    } catch (error) {
-        console.error('Bizum error:', error)
-        alert('Error al procesar: ' + error.message)
-    } finally {
-        setIsProcessingPayment(false)
     }
   }
 
@@ -287,46 +255,6 @@ const ServiceDetailPage = () => {
 
         </div>
       </div>
-
-      {/* Bizum desactivado — pendiente integración real */}
-      {/*
-      {showBizumModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl animate-in fade-in zoom-in duration-300">
-                <div className="text-center">
-                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Smartphone className="w-8 h-8 text-blue-600" />
-                    </div>
-                    <h3 className="text-2xl font-black text-gray-900 mb-2">Pagar con Bizum</h3>
-                    <p className="text-gray-500 mb-6">Envía el importe exacto al siguiente número para activar tu suscripción.</p>
-
-                    <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
-                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">NÚMERO BIZUM</p>
-                        <p className="text-3xl font-black text-gray-900 tracking-wider mb-2 select-all">+34 600 000 000</p>
-                        <p className="text-sm text-gray-600">Concepto: <b>{service.name}</b></p>
-                        <p className="text-sm text-gray-600 mt-1">Importe: <b className="text-[#EF534F]">€{selectedPlan?.totalPrice.toFixed(2)}</b></p>
-                    </div>
-
-                    <div className="space-y-3">
-                        <button
-                            onClick={handleBizumPayment}
-                            disabled={isProcessingPayment}
-                            className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2"
-                        >
-                            {isProcessingPayment ? <Loader2 className="w-5 h-5 animate-spin" /> : 'He enviado el pago'}
-                        </button>
-                        <button
-                            onClick={() => setShowBizumModal(false)}
-                            className="w-full py-3 text-gray-500 font-medium hover:text-gray-800"
-                        >
-                            Cancelar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-      )}
-      */}
     </>
   )
 }

@@ -82,6 +82,16 @@ Opciones de recuperación:
 | Archivo | Fecha | Resumen | Riesgo |
 |---|---|---|---|
 | `20260527_p0_hardening.sql` | 2026-05-27 | Cierra vectores P0: idempotencia Stripe, UNIQUE en payment_intents, CHECK constraints, bloqueo self-elevation a admin, reescritura de RLS en memberships y subscription_groups, REVOKE en RPCs financieras, search_path en funciones SECURITY DEFINER. | **Medio** — cambia RLS y triggers. Si el frontend hace `select('*')` sobre `subscription_groups` o intenta `INSERT/DELETE` directos en `memberships` desde el cliente, dejará de funcionar (ahora solo vía RPC SECURITY DEFINER). Probar bien antes de aplicar a producción. |
+| `20260529_wallet_hardening.sql` | 2026-05-29 | Crea RPC segura `handle_join_group_wallet_v2(p_group_id, p_description)` que sustituye a la insegura `handle_join_group_wallet` (de `wallets.sql`). La v2 toma el user de `auth.uid()` (no del body) y recalcula el importe en servidor (`price_per_slot + 0.35`), cerrando la suplantación de user_id y la inyección de importe. Concede EXECUTE a `authenticated`. | **Bajo** — solo añade una función nueva y un GRANT; no toca tablas, RLS ni la RPC antigua. Requiere migrar los callers a la v2 antes de retirar la antigua. |
+
+## Orden de aplicación
+
+Aplicar **en orden cronológico**:
+
+1. `20260527_p0_hardening.sql`
+2. `20260529_wallet_hardening.sql`  ← depende del estado tras la P0
+   (search_path/SECURITY DEFINER ya como convención). Aplicar **después**
+   de la P0.
 
 ## Riesgos comunes y cómo resolverlos
 

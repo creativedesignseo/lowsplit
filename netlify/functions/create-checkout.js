@@ -94,7 +94,7 @@ export async function handler(event) {
         },
       ],
       mode: 'payment',
-      success_url: `${baseUrl}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${baseUrl}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/explore`,
       metadata: {
         userId: user.id,

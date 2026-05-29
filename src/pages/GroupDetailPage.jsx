@@ -112,11 +112,9 @@ const GroupDetailPage = () => {
     setJoining(true)
     setShowPaymentModal(false)
     try {
-      const { error: rpcError } = await supabase.rpc('handle_join_group_wallet', {
-        p_user_id: session.user.id,
-        p_group_id: id,
-        p_amount: total,
-        p_description: `Acceso a ${service.name}`
+      const { error: rpcError } = await supabase.rpc('handle_join_group_wallet_v2', {
+        p_group_id: group.id,
+        p_description: `Suscripción ${service.name || 'grupo'}`
       })
       if (rpcError) throw rpcError
       await supabase.from('notifications').insert({
@@ -139,14 +137,21 @@ const GroupDetailPage = () => {
     setJoining(true)
     setShowPaymentModal(false)
     try {
+      const { data: { session: authSession } } = await supabase.auth.getSession()
+      if (!authSession) {
+        setJoining(false)
+        navigate('/login', { state: { from: `/group/${id}` } })
+        return
+      }
+
       const response = await fetch('/.netlify/functions/create-group-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authSession.access_token}`,
+        },
         body: JSON.stringify({
-          groupId: id,
-          userId: session.user.id,
-          amount: total,
-          serviceName: service.name
+          groupId: group.id
         })
       })
       const { sessionId, error } = await response.json()
@@ -494,6 +499,8 @@ const GroupDetailPage = () => {
                     </div>
                     <p className="text-xs text-gray-500">Procesado seguro por Stripe</p>
                 </button>
+
+               {/* Pago híbrido desactivado — pendiente rediseño atómico Fase 1 (ver AUDIT_REPORT.md PAY-104) */}
             </div>
           </div>
         </div>

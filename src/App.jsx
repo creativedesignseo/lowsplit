@@ -8,6 +8,8 @@ import DashboardPage from './pages/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import NotFoundPage from './pages/NotFoundPage'
 import ServiceDetailPage from './pages/ServiceDetailPage'
 import GroupDetailPage from './pages/GroupDetailPage'
 import ShareSubscriptionPage from './pages/ShareSubscriptionPage'
@@ -28,9 +30,9 @@ import AdminAudit from './pages/admin/AdminAudit'
 const Layout = ({ children }) => {
   const location = useLocation()
   
-  // Auth pages or Test page don't show navbar/footer
+  // Auth pages don't show navbar/footer
   // Admin pages have their own layout
-  const isAuthPage = ['/login', '/register', '/test'].includes(location.pathname) || location.pathname.startsWith('/admin')
+  const isAuthPage = ['/login', '/register', '/forgot-password'].includes(location.pathname) || location.pathname.startsWith('/admin')
   
   if (isAuthPage) {
     return <>{children}</>
@@ -69,6 +71,7 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
@@ -78,6 +81,9 @@ function App() {
               <Route path="groups" element={<AdminGroups />} />
               <Route path="audit" element={<AdminAudit />} />
           </Route>
+
+          {/* Catch-all 404 — must be last */}
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Layout>
     </>
