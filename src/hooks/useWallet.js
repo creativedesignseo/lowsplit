@@ -42,8 +42,8 @@ export const useWallet = (userId) => {
   })
 
   return {
-    balance,
-    transactions,
+    balance: balance ?? 0,
+    transactions: transactions ?? [],
     isLoading: isLoadingBalance || isLoadingTransactions,
     error: balanceError,
   }

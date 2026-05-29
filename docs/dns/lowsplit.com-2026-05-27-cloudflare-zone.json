@@ -1,0 +1,67 @@
+{
+    "result": {
+        "id": "6788d2a72bb81784332928acae11e5f2",
+        "name": "lowsplit.com",
+        "status": "active",
+        "paused": false,
+        "type": "full",
+        "development_mode": -23409812,
+        "name_servers": [
+            "dahlia.ns.cloudflare.com",
+            "kurt.ns.cloudflare.com"
+        ],
+        "original_name_servers": [
+            "dns1.registrar-servers.com",
+            "dns2.registrar-servers.com"
+        ],
+        "original_registrar": "namecheap, inc. (id: 1068)",
+        "original_dnshost": null,
+        "modified_on": "2025-08-20T16:53:54.143323Z",
+        "created_on": "2025-08-20T16:48:40.922702Z",
+        "activated_on": "2025-08-20T16:53:54.143323Z",
+        "vanity_name_servers": [],
+        "vanity_name_servers_ips": null,
+        "meta": {
+            "step": 2,
+            "custom_certificate_quota": 0,
+            "page_rule_quota": 3,
+            "phishing_detected": false
+        },
+        "owner": {
+            "id": null,
+            "type": "user",
+            "email": null
+        },
+        "account": {
+            "id": "2db1294827f25d7c3fb9e169fc2c4a43",
+            "name": "Ruth.tovar4@gmail.com's Account"
+        },
+        "tenant": {
+            "id": null,
+            "name": null
+        },
+        "tenant_unit": {
+            "id": null
+        },
+        "permissions": [
+            "#dns_records:edit",
+            "#dns_records:read",
+            "#zone:read"
+        ],
+        "plan": {
+            "id": "0feeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            "name": "Free Website",
+            "price": 0,
+            "currency": "USD",
+            "frequency": "",
+            "is_subscribed": false,
+            "can_subscribe": false,
+            "legacy_id": "free",
+            "legacy_discount": false,
+            "externally_managed": false
+        }
+    },
+    "success": true,
+    "errors": [],
+    "messages": []
+}

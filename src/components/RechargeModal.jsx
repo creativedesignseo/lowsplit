@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { X, Loader2, Plus, Wallet } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 export default function RechargeModal({ isOpen, onClose, user }) {
   const [rechargeAmount, setRechargeAmount] = useState(10)
@@ -11,13 +12,21 @@ export default function RechargeModal({ isOpen, onClose, user }) {
     if (!user) return
     setRecharging(true)
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        alert('Tu sesión ha caducado. Vuelve a iniciar sesión para recargar.')
+        setRecharging(false)
+        return
+      }
+
       const response = await fetch('/.netlify/functions/create-topup-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
-          amount: rechargeAmount,
-          userId: user.id,
-          userEmail: user.email
+          amount: rechargeAmount
         })
       })
 

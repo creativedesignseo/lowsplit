@@ -1,0 +1,25 @@
+{
+  "audits": [
+    {
+      "timestamp": "2026-05-29T00:00:00Z",
+      "mode": "ad-hoc-10-agents",
+      "score": 8,
+      "note": "Auditoría original. 7 P0 explotables en producción."
+    },
+    {
+      "timestamp": "2026-05-29T17:00:00Z",
+      "mode": "full-13-agents",
+      "branch": "fix/p0-production-readiness",
+      "score_production_live": 8,
+      "score_branch_strict": 12,
+      "score_projected_after_activation": 55,
+      "by_area": {
+        "security": 0, "payments": 0, "data": 0, "ui-ux": 0, "qa": 0,
+        "admin": 0, "seo-perf": 0, "deploy": 0, "stack": 0, "legal": 0
+      },
+      "findings_count": { "critical": 12, "high": 18, "medium": 17, "low": 11 },
+      "key_insight": "Fase 0 correcta en codigo pero no activa: SQL sin aplicar + frontend sin JWT (pagos rotos, PAY-101) + Legal nuevo con 3 criticos.",
+      "top_blockers": ["C1-migracion-sin-aplicar", "C2-frontend-sin-JWT", "C3-wallet-manipulable", "C4-credenciales-texto-plano"]
+    }
+  ]
+}

@@ -9,12 +9,32 @@
   port = 8888
   autoLaunch = false
 
-
 [functions]
   node_bundler = "esbuild"
 
-# SEGURIDAD ANTI-SEO (Borrar esta sección antes de producción)
+# SPA fallback — todas las rutas no estáticas sirven index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Cabeceras de seguridad globales
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Robots-Tag = "noindex"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+# CORS restringido para Netlify Functions.
+# El header de aquí es un fallback estático — la whitelist real (con soporte para
+# www, deploy previews y localhost) se aplica dinámicamente desde
+# netlify/functions/_lib/auth.js → corsHeaders(origin).
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "https://lowsplit.com"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"

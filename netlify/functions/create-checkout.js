@@ -1,18 +1,20 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth, corsHeaders } from './_lib/auth.js';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2024-12-18.acacia',
+});
+
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 export async function handler(event) {
-  // Handle CORS
   const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+    ...corsHeaders(event.headers.origin),
+    'Content-Type': 'application/json',
   };
 
   if (event.httpMethod === 'OPTIONS') {
@@ -20,40 +22,59 @@ export async function handler(event) {
   }
 
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers, body: 'Method Not Allowed' };
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({ error: 'Method Not Allowed' }),
+    };
+  }
+
+  let user;
+  try {
+    user = await requireAuth(event);
+  } catch (error) {
+    return {
+      statusCode: error.statusCode || 401,
+      headers,
+      body: JSON.stringify({ error: error.message }),
+    };
   }
 
   try {
-    const { serviceName, months, userEmail, userId, groupId } = JSON.parse(event.body);
+    // userId NUNCA se acepta del cliente — se usa user.id del JWT
+    const { serviceName, months, userEmail, groupId } = JSON.parse(event.body);
 
     if (!serviceName) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Missing required fields' })
+        body: JSON.stringify({ error: 'Missing required fields' }),
       };
     }
 
-    // Determine base URL reliably
-    const PROD_URL = 'https://lowsplit-app.netlify.app';
-    const baseUrl = event.headers.origin || event.headers.referer?.split('/').slice(0, 3).join('/') || PROD_URL;
+    // Base URL fija — no usar event.headers.origin (vulnerable a phishing)
+    const baseUrl = process.env.APP_PROD_URL || 'http://localhost:5173';
 
     // 1. Fetch Service details from DB to get REAL price (Security)
     const { data: service, error: serviceError } = await supabase
       .from('services')
       .select('*')
       .eq('name', serviceName)
-      .single()
+      .single();
 
     if (serviceError || !service) {
-      console.error('Service lookup error:', serviceError);
-      throw new Error('Servicio no encontrado o no disponible')
+      console.error('[create-checkout] Service lookup error:', serviceError);
+      return {
+        statusCode: 404,
+        headers,
+        body: JSON.stringify({ error: 'Servicio no encontrado o no disponible' }),
+      };
     }
 
     // 2. Calculate Price on Server (Base/Slots * 1.25 Margin)
-    const margin = 1.25
-    const basePrice = (service.total_price / service.max_slots) * margin
-    const finalPrice = Math.round(basePrice * 100) // Stripe requires integer cents
+    const margin = 1.25;
+    const basePrice = (service.total_price / service.max_slots) * margin;
+    const finalPrice = Math.round(basePrice * 100); // Stripe requires integer cents
 
     // 3. Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
@@ -65,36 +86,37 @@ export async function handler(event) {
             currency: 'eur',
             product_data: {
               name: `${service.name} - ${months} ${months === 1 ? 'mes' : 'meses'}`,
-              description: `Acceso compartido a ${service.name} gestionado por LowSplit`
+              description: `Acceso compartido a ${service.name} gestionado por LowSplit`,
             },
-            unit_amount: finalPrice
+            unit_amount: finalPrice,
           },
-          quantity: 1
-        }
+          quantity: 1,
+        },
       ],
       mode: 'payment',
-      success_url: `${baseUrl}/dashboard?payment=success&session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${baseUrl}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/explore`,
       metadata: {
-        userId: userId || '',
+        userId: user.id,
         groupId: groupId || '',
         months: String(months || 1),
-        serviceName: serviceName || ''
-      }
+        serviceName: serviceName || '',
+      },
     });
 
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({ sessionId: session.id, url: session.url })
+      body: JSON.stringify({ sessionId: session.id, url: session.url }),
     };
-
   } catch (error) {
-    console.error('Stripe error:', error);
+    console.error('[create-checkout]', error);
+    const statusCode = error.statusCode && error.statusCode < 500 ? error.statusCode : 500;
+    const message = statusCode < 500 ? error.message : 'Internal error';
     return {
-      statusCode: 500,
+      statusCode,
       headers,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ error: message }),
     };
   }
 }

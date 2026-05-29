@@ -18,14 +18,6 @@ const GroupDetailPage = () => {
   const [session, setSession] = useState(null)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
 
-  // Reviews Mock Data (GamsGo Style)
-  const MOCK_REVIEWS = [
-    { user: 'bud***', service: 'Cuenta de Netflix', comment: '¡Recomendado!', time: '22 minutes ago', rating: 5 },
-    { user: 'gob***', service: 'Suscripción de YouTube', comment: '¡Recomendado!', time: '27 minutes ago', rating: 5 },
-    { user: 'cmi***', service: 'Cuenta de Netflix', comment: '¡Recomendado!', time: '32 minutes ago', rating: 5 },
-    { user: 'Ale***', service: 'Cuenta Disney Plus', comment: '¡Recomendado!', time: '1 hour ago', rating: 5 },
-  ]
-
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
@@ -120,11 +112,9 @@ const GroupDetailPage = () => {
     setJoining(true)
     setShowPaymentModal(false)
     try {
-      const { error: rpcError } = await supabase.rpc('handle_join_group_wallet', {
-        p_user_id: session.user.id,
-        p_group_id: id,
-        p_amount: total,
-        p_description: `Acceso a ${service.name}`
+      const { error: rpcError } = await supabase.rpc('handle_join_group_wallet_v2', {
+        p_group_id: group.id,
+        p_description: `Suscripción ${service.name || 'grupo'}`
       })
       if (rpcError) throw rpcError
       await supabase.from('notifications').insert({
@@ -147,14 +137,21 @@ const GroupDetailPage = () => {
     setJoining(true)
     setShowPaymentModal(false)
     try {
+      const { data: { session: authSession } } = await supabase.auth.getSession()
+      if (!authSession) {
+        setJoining(false)
+        navigate('/login', { state: { from: `/group/${id}` } })
+        return
+      }
+
       const response = await fetch('/.netlify/functions/create-group-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authSession.access_token}`,
+        },
         body: JSON.stringify({
-          groupId: id,
-          userId: session.user.id,
-          amount: total,
-          serviceName: service.name
+          groupId: group.id
         })
       })
       const { sessionId, error } = await response.json()
@@ -408,27 +405,18 @@ const GroupDetailPage = () => {
                         </div>
 
                         <h4 className="font-bold text-gray-900 mb-4 text-sm">Comentarios recientes</h4>
-                        
-                        <div className="space-y-4">
-                            {MOCK_REVIEWS.map((review, i) => (
-                                <div key={i} className="pb-4 border-b border-gray-50 last:border-0 last:pb-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <ThumbsUp className="w-3.5 h-3.5 text-blue-500 fill-current" />
-                                        <span className="font-bold text-sm text-gray-800">{review.user}</span>
-                                        <span className="text-gray-300">|</span>
-                                        <span className="text-xs text-gray-500 truncate max-w-[120px]">{review.service}</span>
-                                    </div>
-                                    <p className="text-sm text-gray-700 font-medium mb-1">
-                                        {review.comment}
-                                    </p>
-                                    <span className="text-xs text-gray-400">{review.time}</span>
-                                </div>
-                            ))}
-                        </div>
 
-                        <button className="w-full mt-4 text-center text-sm font-bold text-gray-900 hover:underline">
-                            Todos los comentarios
-                        </button>
+                        <div className="py-8 flex flex-col items-center justify-center text-center">
+                            <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center mb-3">
+                                <MessageSquareText className="w-5 h-5 text-gray-400" />
+                            </div>
+                            <p className="text-sm text-gray-600 font-medium mb-1">
+                                Aún no hay valoraciones
+                            </p>
+                            <p className="text-xs text-gray-400 max-w-[240px]">
+                                Sé el primero en valorar este grupo cuando completes tu suscripción.
+                            </p>
+                        </div>
                     </div>
 
                 </div>
@@ -511,6 +499,8 @@ const GroupDetailPage = () => {
                     </div>
                     <p className="text-xs text-gray-500">Procesado seguro por Stripe</p>
                 </button>
+
+               {/* Pago híbrido desactivado — pendiente rediseño atómico Fase 1 (ver AUDIT_REPORT.md PAY-104) */}
             </div>
           </div>
         </div>
