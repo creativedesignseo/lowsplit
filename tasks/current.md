@@ -22,6 +22,8 @@ Stack: Node.js · Hosting: Netlify · Live in production: true
 
 ## ✅ Hecho recientemente (esta tanda)
 
+- [x] **RLS activado en `debug_logs`** (2026-06-02) — cerraba el aviso de Supabase `rls_disabled_in_public`. La tabla estaba sin RLS ni políticas → acceso público vía anon key. Solo la escribe `stripe-webhook.js` con service_role (bypassa RLS), así que `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` sin políticas la cierra sin romper nada. Migración: `database/migrations/20260602_enable_rls_debug_logs.sql` (aplicada vía Management API).
+- [x] **Verificación env vars Netlify** (2026-06-02) — las 3 secretas existen. HALLAZGO: el sitio corre en **modo TEST** (sk_test_ + pk_test_), no cobra dinero real. Hay 2 webhooks: LIVE `we_1Suq56`→lowsplit.com (el "arreglado", inactivo en test) y TEST `we_1SsxNy`→subdominio viejo (el activo ahora). Decisión: seguir en TEST y dejarlo coherente (pendiente verificar match de STRIPE_WEBHOOK_SECRET con el endpoint TEST).
 - [x] **Migraciones P0 aplicadas** en Supabase (`20260527_p0_hardening` + `20260529_wallet_hardening`).
 - [x] **PR #1 mergeado → deploy** en producción (código con headers JWT ya en vivo).
 - [x] **Webhook Stripe corregido** — URL `lowsplit.netlify.app` (404, muerto) → `https://lowsplit.com/.netlify/functions/stripe-webhook`, y de 1 evento a 4 (checkout.session.completed, payment_intent.payment_failed, charge.refunded, charge.dispute.created). Endpoint id `we_1Suq56GtkBSGwZr1NWNeJFlZ`. Mismo signing secret (no cambió).

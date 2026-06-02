@@ -1,0 +1,27 @@
+-- =====================================================
+-- 20260602_enable_rls_debug_logs.sql
+-- =====================================================
+-- QUÉ HACE:
+--   Activa Row-Level Security en `public.debug_logs`, cerrando el aviso de
+--   seguridad de Supabase "rls_disabled_in_public" (correo del 31/05/2026).
+--
+-- POR QUÉ:
+--   `debug_logs` estaba SIN RLS y SIN políticas → cualquiera con la anon key
+--   (que es pública, viaja en el bundle del navegador como VITE_SUPABASE_ANON_KEY)
+--   podía leer/editar/borrar sus filas vía la API REST de Supabase, saltándose
+--   el frontend. La tabla guarda `message` + `details` (jsonb) de eventos del
+--   webhook de Stripe, que pueden contener IDs de sesión, importes y emails.
+--
+-- POR QUÉ SIN POLÍTICAS:
+--   La tabla la escribe SOLO `netlify/functions/stripe-webhook.js` usando la
+--   SUPABASE_SERVICE_ROLE_KEY, que IGNORA RLS por diseño. Por tanto activar RLS
+--   sin añadir políticas deja el comportamiento "deny all" para anon/authenticated
+--   (cero acceso por la API pública) y NO rompe el webhook. No se añaden políticas
+--   a propósito: ningún rol público debe poder leer esta tabla interna.
+--
+-- IMPACTO / RIESGO:
+--   Funcional: ninguno. El webhook sigue escribiendo (service_role bypassa RLS).
+--   Revertir (no recomendado): ALTER TABLE public.debug_logs DISABLE ROW LEVEL SECURITY;
+-- =====================================================
+
+ALTER TABLE public.debug_logs ENABLE ROW LEVEL SECURITY;
