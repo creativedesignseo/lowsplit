@@ -23,7 +23,9 @@ Stack: Node.js · Hosting: Netlify · Live in production: true
 ## ✅ Hecho recientemente (esta tanda)
 
 - [x] **RLS activado en `debug_logs`** (2026-06-02) — cerraba el aviso de Supabase `rls_disabled_in_public`. La tabla estaba sin RLS ni políticas → acceso público vía anon key. Solo la escribe `stripe-webhook.js` con service_role (bypassa RLS), así que `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` sin políticas la cierra sin romper nada. Migración: `database/migrations/20260602_enable_rls_debug_logs.sql` (aplicada vía Management API).
-- [x] **Verificación env vars Netlify** (2026-06-02) — las 3 secretas existen. HALLAZGO: el sitio corre en **modo TEST** (sk_test_ + pk_test_), no cobra dinero real. Hay 2 webhooks: LIVE `we_1Suq56`→lowsplit.com (el "arreglado", inactivo en test) y TEST `we_1SsxNy`→subdominio viejo (el activo ahora). Decisión: seguir en TEST y dejarlo coherente (pendiente verificar match de STRIPE_WEBHOOK_SECRET con el endpoint TEST).
+- [x] **Verificación env vars Netlify** (2026-06-02) — las 3 secretas existen. HALLAZGO: el sitio corre en **modo TEST** (sk_test_ + pk_test_), no cobra dinero real. Hay 2 webhooks: LIVE `we_1Suq56`→lowsplit.com (el "arreglado", inactivo en test) y TEST `we_1SsxNy`→subdominio viejo (el activo ahora). Decisión: seguir en TEST.
+- [x] **Webhook TEST verificado end-to-end** (2026-06-03) — `stripe trigger checkout.session.completed` → la función logueó `Event constructed` en debug_logs → la firma valida → `STRIPE_WEBHOOK_SECRET` de Netlify COINCIDE con el secret del endpoint TEST `we_1SsxNy`. Cadena Stripe→función sana en test. El endpoint TEST se deja en el subdominio Netlify a propósito (evita el proxy Cloudflare, más robusto para webhooks; el endpoint LIVE en lowsplit.com podría ser frágil el día que se pase a prod).
+- [ ] **Hallazgo Ola 2:** `payment_transactions.user_id` acepta NULL → transacciones huérfanas. Añadir NOT NULL o que el webhook no inserte sin user identificado.
 - [x] **Migraciones P0 aplicadas** en Supabase (`20260527_p0_hardening` + `20260529_wallet_hardening`).
 - [x] **PR #1 mergeado → deploy** en producción (código con headers JWT ya en vivo).
 - [x] **Webhook Stripe corregido** — URL `lowsplit.netlify.app` (404, muerto) → `https://lowsplit.com/.netlify/functions/stripe-webhook`, y de 1 evento a 4 (checkout.session.completed, payment_intent.payment_failed, charge.refunded, charge.dispute.created). Endpoint id `we_1Suq56GtkBSGwZr1NWNeJFlZ`. Mismo signing secret (no cambió).
@@ -45,8 +47,8 @@ Stack: Node.js · Hosting: Netlify · Live in production: true
 
 - [ ] **Rotar tokens** pegados en chats anteriores: Cloudflare (`~/.claude/credentials/cloudflare.env`) y Supabase (`~/.claude/credentials/supabase.env`).
 - [ ] Encrypt account credentials (plain text today in `subscription_groups`) — GDPR critical (Ola 2).
-- [ ] Create `eslint.config.js` (lint is broken → verify.sh red on lint).
-- [ ] SEO: robots.txt + sitemap.xml + Open Graph + canonical (see TODO.md).
+- [x] **`eslint.config.js` creado** (2026-06-03) — flat config ESLint 9 (React 18 + Vite ESM). `npm run lint` ahora pasa: 0 errores, 38 warnings legacy (vars sin usar, deps de useEffect). verify.sh ya no está rojo en lint.
+- [x] **SEO base** (2026-06-03) — `public/robots.txt` (+ disallow zonas privadas), `public/sitemap.xml` (home/explore/share), y Open Graph + Twitter Card + canonical + robots meta en `index.html`. Pendiente: OG image dedicada 1200×630 (ahora usa logo-email.png como placeholder).
 - [ ] Legal pages (`/terms`, `/privacy`, `/refund`) — requieren texto de abogado (Ola 2).
 - [ ] Borrado de cuenta / derecho al olvido RGPD (Ola 2).
 
@@ -68,7 +70,7 @@ Después, configurar SMTP (Arreglo 2) para que lleguen los emails.
 
 ## Known pre-existing failures (not blockers, but on the floor)
 
-- `npm run lint` fails: no `eslint.config.js`. Tracked in TODO.md Fase 1. `npm run build` passes.
+- ~~`npm run lint` fails: no `eslint.config.js`~~ → FIXED 2026-06-03. Lint passes (0 errors, 38 warnings). `npm run build` passes.
 
 ---
 
