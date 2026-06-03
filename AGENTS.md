@@ -178,7 +178,8 @@ src/pages/                   12 pages + pages/admin/
 netlify/functions/_lib/auth.js   requireAuth + corsHeaders (Fase 0)
 netlify/functions/create-*.js    checkout (JWT, server-side pricing)
 netlify/functions/stripe-webhook.js  webhook (signature + idempotency)
-database/migrations/20260527_p0_hardening.sql  P0 migration (NOT applied yet)
+database/migrations/20260527_p0_hardening.sql  P0 migration (APPLIED to prod)
+database/migrations/20260529_wallet_hardening.sql  wallet v2 RPC (APPLIED to prod)
 docs/dns/                    DNS backups (historical)
 ```
 

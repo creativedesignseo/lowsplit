@@ -4,41 +4,53 @@
 > Older completed tasks live in `progress/`. Full backlog in `TODO.md`.
 > Operational truth in `HANDOFF.md`.
 
-**Last updated:** 2026-05-27
+**Last updated:** 2026-05-29 (Ola 1 cerrándose: webhook Stripe + Auth URLs corregidos)
 
 ---
 
 ## Current state
 
 Project is **LIVE** at https://lowsplit.com (Netlify behind Cloudflare).
-Audited at score **8/100 — 🛑 BLOCKED for safe production**. The Fase 0
-security fixes are done **on branch `fix/p0-production-readiness`, NOT yet
-committed**. The build passes. The SQL hardening migration is generated but
-**not yet applied to Supabase**.
+Fase 0 + Ola 1 **están en producción** (PR #1 mergeado, deploy hecho). Las dos
+migraciones SQL P0 **están aplicadas** en Supabase. Hoy se corrigieron dos
+config de producción que estaban rotas: el **webhook de Stripe** (apuntaba a un
+dominio muerto) y las **URLs de Auth de Supabase** (apuntaban al subdominio viejo).
 
 Stack: Node.js · Hosting: Netlify · Live in production: true
 
 ---
 
-## P0 — blocking ship
+## ✅ Hecho recientemente (esta tanda)
 
-- [ ] **Apply `database/migrations/20260527_p0_hardening.sql` in Supabase** — SQL Editor → paste → Run. The orphan row that blocked it (amount=0) was already deleted.
-- [ ] **Commit + push branch `fix/p0-production-readiness`** — Fase 0 fixes + 4 context docs + harness. Not committed yet.
-- [ ] **Merge to `main` + verify Netlify deploy** — push to main triggers auto-deploy; removes the `noindex` blocker.
-- [ ] **Set Cloudflare SSL/TLS mode to "Full (strict)"** — manual, dashboard (token lacks Zone Settings:Edit).
-- [ ] **Register Stripe webhook** at `https://lowsplit.com/.netlify/functions/stripe-webhook` (events: checkout.session.completed, payment_intent.payment_failed, charge.refunded, charge.dispute.created) → copy signing secret to Netlify env.
-- [ ] **Verify secret env vars in Netlify** (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY).
+- [x] **RLS activado en `debug_logs`** (2026-06-02) — cerraba el aviso de Supabase `rls_disabled_in_public`. La tabla estaba sin RLS ni políticas → acceso público vía anon key. Solo la escribe `stripe-webhook.js` con service_role (bypassa RLS), así que `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` sin políticas la cierra sin romper nada. Migración: `database/migrations/20260602_enable_rls_debug_logs.sql` (aplicada vía Management API).
+- [x] **Verificación env vars Netlify** (2026-06-02) — las 3 secretas existen. HALLAZGO: el sitio corre en **modo TEST** (sk_test_ + pk_test_), no cobra dinero real. Hay 2 webhooks: LIVE `we_1Suq56`→lowsplit.com (el "arreglado", inactivo en test) y TEST `we_1SsxNy`→subdominio viejo (el activo ahora). Decisión: seguir en TEST.
+- [x] **Webhook TEST verificado end-to-end** (2026-06-03) — `stripe trigger checkout.session.completed` → la función logueó `Event constructed` en debug_logs → la firma valida → `STRIPE_WEBHOOK_SECRET` de Netlify COINCIDE con el secret del endpoint TEST `we_1SsxNy`. Cadena Stripe→función sana en test. El endpoint TEST se deja en el subdominio Netlify a propósito (evita el proxy Cloudflare, más robusto para webhooks; el endpoint LIVE en lowsplit.com podría ser frágil el día que se pase a prod).
+- [ ] **Hallazgo Ola 2:** `payment_transactions.user_id` acepta NULL → transacciones huérfanas. Añadir NOT NULL o que el webhook no inserte sin user identificado.
+- [x] **Migraciones P0 aplicadas** en Supabase (`20260527_p0_hardening` + `20260529_wallet_hardening`).
+- [x] **PR #1 mergeado → deploy** en producción (código con headers JWT ya en vivo).
+- [x] **Webhook Stripe corregido** — URL `lowsplit.netlify.app` (404, muerto) → `https://lowsplit.com/.netlify/functions/stripe-webhook`, y de 1 evento a 4 (checkout.session.completed, payment_intent.payment_failed, charge.refunded, charge.dispute.created). Endpoint id `we_1Suq56GtkBSGwZr1NWNeJFlZ`. Mismo signing secret (no cambió).
+- [x] **Auth URLs de Supabase corregidas** (Management API) — site_url → `https://lowsplit.com`; allow list → lowsplit.com/** , www.lowsplit.com/** , lowsplit-app.netlify.app/** , localhost:5173/**.
+
+---
+
+## P0 — para cerrar Ola 1 del todo
+
+- [ ] **Verificar `STRIPE_WEBHOOK_SECRET` en Netlify == signing secret del endpoint** `we_1Suq56...`. Si no coincide, la función rechaza todo con 400. Cómo: Stripe Dashboard → Webhooks → endpoint lowsplit.com → Reveal signing secret → comparar con Netlify env. (Prueba dura: `stripe trigger` contra el endpoint.)
+- [ ] **Verificar las 3 env vars secretas en Netlify** (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY).
+- [ ] **SMTP / email (Arreglo 2)** — registrar/reset emails no llegan. Configurar proveedor (Resend recomendado) en Supabase → Auth → SMTP. Requiere cuenta del usuario + verificación de dominio (DNS en Cloudflare lo puede hacer Claude).
+- [ ] **Set Cloudflare SSL/TLS mode a "Full (strict)"** — manual, dashboard (token actual no tiene Zone Settings:Edit).
+- [ ] **Probar pago end-to-end** (Stripe test mode): unirse a grupo con tarjeta y con wallet, sin 401, acceso solo tras webhook.
 
 ---
 
 ## P1 — important, not blocking
 
-- [ ] Encrypt account credentials (plain text today in `subscription_groups`) — GDPR critical.
-- [ ] Create `eslint.config.js` (lint is broken → verify.sh red on lint).
-- [ ] Version missing RPCs in repo (`handle_partial_wallet_payment`, `handle_join_group_card`, `increment_group_slots`).
-- [ ] SEO: robots.txt + sitemap.xml + Open Graph + canonical (see TODO.md).
-- [ ] `/forgot-password` page + catch-all 404 route.
-- [ ] Rotate the Cloudflare token (it was pasted in a previous chat).
+- [ ] **Rotar tokens** pegados en chats anteriores: Cloudflare (`~/.claude/credentials/cloudflare.env`) y Supabase (`~/.claude/credentials/supabase.env`).
+- [ ] Encrypt account credentials (plain text today in `subscription_groups`) — GDPR critical (Ola 2).
+- [x] **`eslint.config.js` creado** (2026-06-03) — flat config ESLint 9 (React 18 + Vite ESM). `npm run lint` ahora pasa: 0 errores, 38 warnings legacy (vars sin usar, deps de useEffect). verify.sh ya no está rojo en lint.
+- [x] **SEO base** (2026-06-03) — `public/robots.txt` (+ disallow zonas privadas), `public/sitemap.xml` (home/explore/share), y Open Graph + Twitter Card + canonical + robots meta en `index.html`. Pendiente: OG image dedicada 1200×630 (ahora usa logo-email.png como placeholder).
+- [ ] Legal pages (`/terms`, `/privacy`, `/refund`) — requieren texto de abogado (Ola 2).
+- [ ] Borrado de cuenta / derecho al olvido RGPD (Ola 2).
 
 ---
 
@@ -50,19 +62,20 @@ Stack: Node.js · Hosting: Netlify · Live in production: true
 
 ## Next recommended action
 
-**Apply the SQL migration in Supabase** (P0 #1), then **commit + push** the
-branch (P0 #2). That closes the code+DB side of Fase 0.
+**Verificar el `STRIPE_WEBHOOK_SECRET` en Netlify** (P0 #1) — es lo único que
+queda entre "webhook con URL correcta" y "pagos funcionando end-to-end".
+Después, configurar SMTP (Arreglo 2) para que lleguen los emails.
 
 ---
 
 ## Known pre-existing failures (not blockers, but on the floor)
 
-- `npm run lint` fails: no `eslint.config.js`. Tracked in TODO.md Fase 1. `npm run build` passes.
+- ~~`npm run lint` fails: no `eslint.config.js`~~ → FIXED 2026-06-03. Lint passes (0 errors, 38 warnings). `npm run build` passes.
 
 ---
 
 ## Out of scope right now
 
-- UI/UX redesign (Fase 1/2 — after Fase 0 closes).
-- TypeScript migration, tests, CI/CD (Fase 2/3).
+- UI/UX redesign (Ola 3 — design system, <Button>, alert()→Toast, tipografía).
+- TypeScript migration, tests, CI/CD.
 - Bizum reactivation (deferred until a real PSP integration exists).
