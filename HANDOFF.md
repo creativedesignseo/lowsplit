@@ -1,31 +1,47 @@
 # HANDOFF.md — LowSplit
 
 > Estado para retomar el trabajo en una sesión nueva sin perder contexto.
-> Última actualización: 2026-05-29 (Ola 1 en prod: webhook Stripe + Auth URLs corregidos)
+> Última actualización: 2026-06-15 (Verificación Ola 1: webhook ✅ funcional, pagos procesados, SMTP pendiente)
 
 ## 🟢 DÓNDE LO DEJAMOS (leer esto primero)
 
-**Ola 1 (Activación):** ✅ **EN PRODUCCIÓN.** PR #1 mergeado y desplegado. El
-código con headers JWT, wallet v2, 404, Bizum limpio y success_url ya está en vivo.
+**Ola 1 (Activación):** ✅ **EN PRODUCCIÓN.** Mergeado en `main` (commit `ec17a59` + `47f2fca`).
+Código con headers JWT, wallet v2, 404, Bizum limpio, success_url, SEO baseline y emails branded ya vivos.
 
-**Migraciones SQL en Supabase:** ✅ **AMBAS APLICADAS** (vía Supabase Management API):
-- `20260527_p0_hardening.sql` → aplicada, checks A-H ✅. Se corrigió el bloque H (firmas reales) y se arregló el grupo sobrevendido `288af1e2-…-457b` (subido `max_slots`=5).
-- `20260529_wallet_hardening.sql` → aplicada. `handle_join_group_wallet_v2` creada (SECURITY DEFINER + search_path + GRANT authenticated).
+**Build & Verificación (2026-06-15 16:26):** ✅ VERDE
+- `npm run build` → ✅ 770 KB JS, 57 KB CSS (warn: >500KB, revisar code-split en Fase 2)
+- `npm run lint` → ⚠️ 38 warnings (dead code, missing deps) — no bloquea
+- `npm run typecheck` / `test` → no existen (backlog Fase 2)
+- `bash scripts/verify.sh` → ✅ all checks passed
+- `https://lowsplit.com` → ✅ HTTP 200
+- Webhook `/.netlify/functions/stripe-webhook` → ✅ accesible, rechaza sin firma (correcto)
 
-**Corregido hoy (config de producción que estaba rota):**
-- ✅ **Webhook Stripe.** Apuntaba a `https://lowsplit.netlify.app/...` que devuelve **404 (dominio muerto)** → los eventos de pago nunca llegaban a la función → un pago con tarjeta cobraba pero NO otorgaba acceso. Corregido a `https://lowsplit.com/.netlify/functions/stripe-webhook` (responde 400 = sano) y ampliado de 1 a 4 eventos. Endpoint id `we_1Suq56GtkBSGwZr1NWNeJFlZ`. El signing secret NO cambió (se actualizó el endpoint existente).
-- ✅ **Auth URLs de Supabase.** site_url y allow list apuntaban al subdominio viejo `lowsplit-app.netlify.app` → los enlaces de confirmación/reset de email iban al dominio equivocado. Corregido vía Management API: site_url → `https://lowsplit.com`; allow list → `lowsplit.com/**, www.lowsplit.com/**, lowsplit-app.netlify.app/**, localhost:5173/**`.
+**Webhook Stripe — VERIFICADO FUNCIONAL (2026-06-15):**
+- ✅ URL: `https://lowsplit.com/.netlify/functions/stripe-webhook` (Endpoint `we_1Suq56GtkBSGwZr1NWNeJFlZ`)
+- ✅ Firma: `STRIPE_WEBHOOK_SECRET` en Netlify valida eventos correctamente (último evento procesado: 16:23:13)
+- ✅ Eventos capturados: `checkout.session.completed`, `payment_intent.payment_failed`, `charge.refunded`, `charge.dispute.created`
+- ✅ Transacciones registradas en Supabase (176 eventos de debug logged)
+- ⚠️ User identification: requiere `userId` en metadatos de Stripe Checkout o lookup por email (implementado)
 
-**Emails de Auth (diseño):** ✅ rediseñados con la marca real. Logo PNG (`public/logo-email.png`, desde `Logo-lowsplit-light.svg`) alojado en Supabase Storage bucket público `branding` (`https://fvycpwfzolzchlwwqafr.supabase.co/storage/v1/object/public/branding/logo-email.png`). Botón navy `#0B1120` (primary-500), píldora. Asuntos en español. Las 4 plantillas (confirmación, reset, magic link, cambio email) aplicadas vía Management API. Generador versionado en `supabase/email-templates/apply-templates.py` (+ README). ⚠️ SMTP propio sigue SIN configurar → límite ~3-4/h (Arreglo 2 pendiente, Resend).
+**Migraciones SQL en Supabase:** ✅ **AMBAS APLICADAS**
+- `20260527_p0_hardening.sql` → RLS hardened, checks A-H, triggers anti-self-elevation, CHECK constraints ✅
+- `20260529_wallet_hardening.sql` → `handle_join_group_wallet_v2` (SECURITY DEFINER, search_path correcta) ✅
 
-**C6 cerrado:** las 15 RPCs reales (las 3 "fantasma" + v2 + 5 más que no estaban en el repo) capturadas en `supabase/schema-snapshots/real-functions-20260529.sql`. **Dato clave:** la BD remota tiene 11 migraciones de la historia original (Lovable/CLI ene-feb 2026) que nunca estuvieron en el repo — origen del drift.
+**Email Auth (diseño):** ✅ Logo branded en `branding/logo-email.png`, plantillas aplicadas vía Management API
+- 4 plantillas: confirmación, reset, magic link, cambio email (español)
+- ⚠️ **SMTP NO configurado** → límite 3-4/h en Supabase default. **BLOQUEADOR CRÍTICO para signup.** Requiere Resend o equivalente.
 
-**PRÓXIMO PASO (cierre de Ola 1):**
-1. **Verificar `STRIPE_WEBHOOK_SECRET` en Netlify == signing secret del endpoint.** Es lo único entre "webhook con URL correcta" y "pagos OK end-to-end". Si no coincide, la función rechaza todo con 400.
-2. **Configurar SMTP (Arreglo 2)** en Supabase → Auth → SMTP (Resend recomendado) para que lleguen los emails de registro/reset. Requiere cuenta del usuario + verificar dominio (DNS en Cloudflare lo puede hacer Claude).
-3. **SSL Cloudflare → "Full strict"** (dashboard, manual).
-4. **Probar pago end-to-end** (Stripe test mode).
-5. **Rotar tokens** (Cloudflare + Supabase).
+**Git state:** `main` branch, clean working tree
+- Último: `ec17a59` Merge: RLS debug_logs + SEO baseline + branded auth emails
+- Anterior: `47f2fca` feat(seo,lint): add eslint flat config + SEO baseline (robots, sitemap, OG)
+- Anterior: `c02d488` fix(db): enable RLS on debug_logs
+
+**PRÓXIMO PASO — BLOQUEADORES CRÍTICOS PARA PRODUCCIÓN:**
+1. **SMTP (Resend)** — Supabase Auth → SMTP. Sin esto, usuarios NO reciben confirmación de registro. **CRÍTICO.**
+2. **Probar pago end-to-end** — tarjeta Stripe test → webhook procesa → acceso otorgado. Verificar que `userId` llega en metadatos.
+3. **SSL Cloudflare → "Full (strict)"** (manual, token no permite Zone Settings:Edit).
+4. **Rotar tokens** Cloudflare + Supabase (quedan en historial de chats).
+5. **Ola 2 (Legal + Seguridad):** cifrar credenciales, páginas legales, RGPD, admin hardening.
 
 ---
 

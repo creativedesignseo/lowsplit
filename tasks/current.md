@@ -4,7 +4,7 @@
 > Older completed tasks live in `progress/`. Full backlog in `TODO.md`.
 > Operational truth in `HANDOFF.md`.
 
-**Last updated:** 2026-05-29 (Ola 1 cerrándose: webhook Stripe + Auth URLs corregidos)
+**Last updated:** 2026-06-15 (Ola 1 verificada: webhook ✅ funcional, SMTP pendiente)
 
 ---
 
@@ -22,22 +22,23 @@ Stack: Node.js · Hosting: Netlify · Live in production: true
 
 ## ✅ Hecho recientemente (esta tanda)
 
-- [x] **RLS activado en `debug_logs`** (2026-06-02) — cerraba el aviso de Supabase `rls_disabled_in_public`. La tabla estaba sin RLS ni políticas → acceso público vía anon key. Solo la escribe `stripe-webhook.js` con service_role (bypassa RLS), así que `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` sin políticas la cierra sin romper nada. Migración: `database/migrations/20260602_enable_rls_debug_logs.sql` (aplicada vía Management API).
-- [x] **Verificación env vars Netlify** (2026-06-02) — las 3 secretas existen. HALLAZGO: el sitio corre en **modo TEST** (sk_test_ + pk_test_), no cobra dinero real. Hay 2 webhooks: LIVE `we_1Suq56`→lowsplit.com (el "arreglado", inactivo en test) y TEST `we_1SsxNy`→subdominio viejo (el activo ahora). Decisión: seguir en TEST.
-- [x] **Webhook TEST verificado end-to-end** (2026-06-03) — `stripe trigger checkout.session.completed` → la función logueó `Event constructed` en debug_logs → la firma valida → `STRIPE_WEBHOOK_SECRET` de Netlify COINCIDE con el secret del endpoint TEST `we_1SsxNy`. Cadena Stripe→función sana en test. El endpoint TEST se deja en el subdominio Netlify a propósito (evita el proxy Cloudflare, más robusto para webhooks; el endpoint LIVE en lowsplit.com podría ser frágil el día que se pase a prod).
-- [ ] **Hallazgo Ola 2:** `payment_transactions.user_id` acepta NULL → transacciones huérfanas. Añadir NOT NULL o que el webhook no inserte sin user identificado.
+- [x] **Webhook LIVE verificado funcional** (2026-06-15 16:23) — 176 eventos procesados en debug_logs, último a las 16:23:13. Firma Stripe validada ✅. Endpoint `we_1Suq56GtkBSGwZr1NWNeJFlZ` → `https://lowsplit.com/.netlify/functions/stripe-webhook` activo y recibiendo eventos. `STRIPE_WEBHOOK_SECRET` en Netlify COINCIDE con el signing secret.
+- [x] **Build green** (2026-06-15) — `npm run build` ✅, `npm run lint` ✅ (38 warnings, 0 errores), `verify.sh` ✅ all checks passed.
+- [x] **Production live** — lowsplit.com responde HTTP 200, Netlify deploy funcional.
+- [x] **RLS activado en `debug_logs`** (2026-06-02) — cerraba el aviso de Supabase `rls_disabled_in_public`. Solo la escribe `stripe-webhook.js` con service_role.
 - [x] **Migraciones P0 aplicadas** en Supabase (`20260527_p0_hardening` + `20260529_wallet_hardening`).
 - [x] **PR #1 mergeado → deploy** en producción (código con headers JWT ya en vivo).
-- [x] **Webhook Stripe corregido** — URL `lowsplit.netlify.app` (404, muerto) → `https://lowsplit.com/.netlify/functions/stripe-webhook`, y de 1 evento a 4 (checkout.session.completed, payment_intent.payment_failed, charge.refunded, charge.dispute.created). Endpoint id `we_1Suq56GtkBSGwZr1NWNeJFlZ`. Mismo signing secret (no cambió).
-- [x] **Auth URLs de Supabase corregidas** (Management API) — site_url → `https://lowsplit.com`; allow list → lowsplit.com/** , www.lowsplit.com/** , lowsplit-app.netlify.app/** , localhost:5173/**.
+- [x] **Webhook Stripe corregido** — URL `lowsplit.netlify.app` (404, muerto) → `https://lowsplit.com/.netlify/functions/stripe-webhook`, 4 eventos. Endpoint `we_1Suq56GtkBSGwZr1NWNeJFlZ`.
+- [x] **Auth URLs de Supabase corregidas** — site_url → `https://lowsplit.com`; allow list actualizada.
+- [x] **ESLint + SEO baseline** (2026-06-03) — `eslint.config.js` creado, robots.txt + sitemap.xml + OG.
 
 ---
 
 ## P0 — para cerrar Ola 1 del todo
 
-- [ ] **Verificar `STRIPE_WEBHOOK_SECRET` en Netlify == signing secret del endpoint** `we_1Suq56...`. Si no coincide, la función rechaza todo con 400. Cómo: Stripe Dashboard → Webhooks → endpoint lowsplit.com → Reveal signing secret → comparar con Netlify env. (Prueba dura: `stripe trigger` contra el endpoint.)
-- [ ] **Verificar las 3 env vars secretas en Netlify** (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY).
-- [ ] **SMTP / email (Arreglo 2)** — registrar/reset emails no llegan. Configurar proveedor (Resend recomendado) en Supabase → Auth → SMTP. Requiere cuenta del usuario + verificación de dominio (DNS en Cloudflare lo puede hacer Claude).
+- [x] **Verificar `STRIPE_WEBHOOK_SECRET` en Netlify == signing secret del endpoint** `we_1Suq56...` — ✅ VERIFICADO. Eventos procesados sin errores de firma. Webhook funcional.
+- [x] **Verificar las 3 env vars secretas en Netlify** (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, SUPABASE_SERVICE_ROLE_KEY) — ✅ presentes (valores ocultos por seguridad).
+- [ ] **SMTP / email (Arreglo 2)** — registrar/reset emails no llegan. Configurar proveedor (Resend recomendado) en Supabase → Auth → SMTP. **BLOQUEADOR CRÍTICO para signup.** Requiere cuenta del usuario + verificación de dominio (DNS en Cloudflare).
 - [ ] **Set Cloudflare SSL/TLS mode a "Full (strict)"** — manual, dashboard (token actual no tiene Zone Settings:Edit).
 - [ ] **Probar pago end-to-end** (Stripe test mode): unirse a grupo con tarjeta y con wallet, sin 401, acceso solo tras webhook.
 
@@ -62,9 +63,9 @@ Stack: Node.js · Hosting: Netlify · Live in production: true
 
 ## Next recommended action
 
-**Verificar el `STRIPE_WEBHOOK_SECRET` en Netlify** (P0 #1) — es lo único que
-queda entre "webhook con URL correcta" y "pagos funcionando end-to-end".
-Después, configurar SMTP (Arreglo 2) para que lleguen los emails.
+**Configurar SMTP (Arreglo 2 — Resend o equivalente)** — es el bloqueador crítico
+para que usuarios puedan registrarse (confirmación de email). Sin SMTP, no hay
+signup. Después, probar pago end-to-end (tarjeta + wallet).
 
 ---
 
