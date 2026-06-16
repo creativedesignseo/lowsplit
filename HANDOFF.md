@@ -1,7 +1,7 @@
 # HANDOFF.md — LowSplit
 
 > Estado para retomar el trabajo en una sesión nueva sin perder contexto.
-> Última actualización: 2026-06-15 (Verificación Ola 1: webhook ✅ funcional, pagos procesados, SMTP pendiente)
+> Última actualización: 2026-06-15 (OLA 1 COMPLETADA: webhook ✅, SSL ✅, SMTP listo para activar en dashboard)
 
 ## 🟢 DÓNDE LO DEJAMOS (leer esto primero)
 
