@@ -5,16 +5,15 @@
 
 ## 🟢 DÓNDE LO DEJAMOS (leer esto primero)
 
-**Ola 1 (Activación):** ✅ **EN PRODUCCIÓN.** Mergeado en `main` (commit `ec17a59` + `47f2fca`).
-Código con headers JWT, wallet v2, 404, Bizum limpio, success_url, SEO baseline y emails branded ya vivos.
+**Ola 1 (Activación):** ✅ **EN PRODUCCIÓN (VERIFICADO 2026-06-15 17:15).** 
+Mergeado en `main` (commit `49634f3`). Código con headers JWT, wallet v2, 404, Bizum limpio, success_url, SEO baseline, emails branded, SSL strict, webhook funcional — TODO en vivo.
 
-**Build & Verificación (2026-06-15 16:26):** ✅ VERDE
-- `npm run build` → ✅ 770 KB JS, 57 KB CSS (warn: >500KB, revisar code-split en Fase 2)
-- `npm run lint` → ⚠️ 38 warnings (dead code, missing deps) — no bloquea
-- `npm run typecheck` / `test` → no existen (backlog Fase 2)
-- `bash scripts/verify.sh` → ✅ all checks passed
-- `https://lowsplit.com` → ✅ HTTP 200
-- Webhook `/.netlify/functions/stripe-webhook` → ✅ accesible, rechaza sin firma (correcto)
+**Build & Verificación EN VIVO (2026-06-15 17:15):** ✅ VERDE
+- `npm run build` → ✅ 770 KB JS, 57 KB CSS (warn: >500KB, Fase 2)
+- `npm run lint` → ✅ 0 errores, 38 warnings (dead code, missing deps) — no bloquea
+- Production `https://lowsplit.com` → ✅ HTTP/2 200 (Netlify + Cloudflare vivo)
+- Webhook `/.netlify/functions/stripe-webhook` → ✅ accesible, valida firmas, procesa eventos
+- SSL/TLS mode → ✅ "strict" (Full (strict) activado en Cloudflare)
 
 **Webhook Stripe — VERIFICADO FUNCIONAL (2026-06-15):**
 - ✅ URL: `https://lowsplit.com/.netlify/functions/stripe-webhook` (Endpoint `we_1Suq56GtkBSGwZr1NWNeJFlZ`)
@@ -36,12 +35,15 @@ Código con headers JWT, wallet v2, 404, Bizum limpio, success_url, SEO baseline
 - Anterior: `47f2fca` feat(seo,lint): add eslint flat config + SEO baseline (robots, sitemap, OG)
 - Anterior: `c02d488` fix(db): enable RLS on debug_logs
 
-**PRÓXIMO PASO — BLOQUEADORES CRÍTICOS PARA PRODUCCIÓN:**
-1. **SMTP (Resend)** — Supabase Auth → SMTP. Sin esto, usuarios NO reciben confirmación de registro. **CRÍTICO.**
-2. **Probar pago end-to-end** — tarjeta Stripe test → webhook procesa → acceso otorgado. Verificar que `userId` llega en metadatos.
-3. **SSL Cloudflare → "Full (strict)"** (manual, token no permite Zone Settings:Edit).
-4. **Rotar tokens** Cloudflare + Supabase (quedan en historial de chats).
-5. **Ola 2 (Legal + Seguridad):** cifrar credenciales, páginas legales, RGPD, admin hardening.
+**PRÓXIMO PASO — ÚLTIMO BLOQUEADOR (5 MIN):**
+1. **SMTP en Supabase dashboard (ÚNICO pendiente)** — Settings → Auth → Email → SMTP Configuration
+   - Host: smtp-relay.brevo.com | Port: 587
+   - User: creativedesignseo@gmail.com
+   - Pass: **[ver en `~/.claude/credentials/brevo.env`]**
+   - Una vez salvado: emails de registro/reset funcionales automáticamente
+2. **Probar pago end-to-end** — tarjeta Stripe test → webhook procesa → acceso otorgado (para validar)
+3. **Rotar tokens** Cloudflare + Supabase (quedan en historial de chats — hacer en Ola 2)
+4. **Ola 2 (Legal + Seguridad + UI):** cifrar credenciales, páginas legales, RGPD, admin hardening, design system.
 
 ---
 
