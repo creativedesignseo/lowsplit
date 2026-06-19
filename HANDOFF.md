@@ -1,19 +1,24 @@
 # HANDOFF.md — LowSplit
 
 > Estado para retomar el trabajo en una sesión nueva sin perder contexto.
-> Última actualización: 2026-06-15 (OLA 1 COMPLETADA: webhook ✅, SSL ✅, SMTP listo para activar en dashboard)
+> Última actualización: 2026-06-20 (RE-VERIFICACIÓN código + prod: Ola 1 EN VIVO, ÚNICO bloqueador real = SMTP sin configurar)
 
 ## 🟢 DÓNDE LO DEJAMOS (leer esto primero)
 
-**Ola 1 (Activación):** ✅ **EN PRODUCCIÓN (VERIFICADO 2026-06-15 17:15).** 
-Mergeado en `main` (commit `49634f3`). Código con headers JWT, wallet v2, 404, Bizum limpio, success_url, SEO baseline, emails branded, SSL strict, webhook funcional — TODO en vivo.
+**Ola 1 (Activación):** ✅ **EN PRODUCCIÓN (RE-VERIFICADO 2026-06-20).**
+Código en `main` desplegado en producción (commit **`7640a76`**, Netlify `state=ready`, publicado 2026-06-16). Working tree limpio, `main` sincronizado con `origin/main`. Headers JWT, wallet v2, catch-all 404, Bizum limpio, success_url, SEO baseline, emails branded, webhook funcional — TODO en vivo.
 
-**Build & Verificación EN VIVO (2026-06-15 17:15):** ✅ VERDE
-- `npm run build` → ✅ 770 KB JS, 57 KB CSS (warn: >500KB, Fase 2)
-- `npm run lint` → ✅ 0 errores, 38 warnings (dead code, missing deps) — no bloquea
-- Production `https://lowsplit.com` → ✅ HTTP/2 200 (Netlify + Cloudflare vivo)
-- Webhook `/.netlify/functions/stripe-webhook` → ✅ accesible, valida firmas, procesa eventos
-- SSL/TLS mode → ✅ "strict" (Full (strict) activado en Cloudflare)
+**Build & Verificación EN VIVO (re-verificado 2026-06-20):** ✅ VERDE
+- `bash scripts/verify.sh` → ✅ **all checks passed**
+- `npm run build` → ✅ 770 KB JS (gzip 217 KB), 57 KB CSS (warn: >500KB, Fase 2)
+- `npm run lint` → ✅ **0 errores**, 38 warnings (dead code, deps de useEffect) — no bloquea. (El `eslint.config.js` YA existe desde 2026-06-03; la nota de "lint roto" en docs viejos está OBSOLETA.)
+- Production `https://lowsplit.com` → ✅ HTTP 200, TLS válido (cert OK, `ssl_verify_result=0`)
+- `https://www.lowsplit.com` → ✅ **301 → apex** (el redirect www→apex que figuraba como pendiente YA EXISTE)
+- Netlify origin `https://lowsplit-app.netlify.app` → ✅ HTTP 200
+- Webhook `/.netlify/functions/stripe-webhook` → ✅ vivo, valida firma (HTTP 400 sin firma, NO 404)
+- SEO en vivo → ✅ sin `noindex`, `robots.txt` 200, `sitemap.xml` 200
+- Supabase advisors (security) → ✅ **0 lints nivel ERROR** (32 menores)
+- SSL/TLS mode Cloudflare → cert válido verificado por curl; el **modo exacto** (Flexible/Full/Strict) NO es verificable con el token DNS actual (sin Zone Settings:Edit) — confirmar a ojo en el dashboard si hace falta.
 
 **Webhook Stripe — VERIFICADO FUNCIONAL (2026-06-15):**
 - ✅ URL: `https://lowsplit.com/.netlify/functions/stripe-webhook` (Endpoint `we_1Suq56GtkBSGwZr1NWNeJFlZ`)
@@ -28,15 +33,16 @@ Mergeado en `main` (commit `49634f3`). Código con headers JWT, wallet v2, 404, 
 
 **Email Auth (diseño):** ✅ Logo branded en `branding/logo-email.png`, plantillas aplicadas vía Management API
 - 4 plantillas: confirmación, reset, magic link, cambio email (español)
-- ⚠️ **SMTP NO configurado** → límite 3-4/h en Supabase default. **BLOQUEADOR CRÍTICO para signup.** Requiere Resend o equivalente.
+- ⚠️ **SMTP NO configurado — RE-VERIFICADO 2026-06-20 vía Management API:** `smtp_host=null`, `smtp_port=null`, `smtp_user=null` → usa el SMTP por defecto de Supabase con `rate_limit_email_sent=2` (≈2 correos/hora). `mailer_autoconfirm=false` (exige confirmar email). `site_url=https://lowsplit.com` (correcto). **ÚNICO BLOQUEADOR REAL para signup.** Requiere Brevo/Resend o equivalente (≈5 min en el dashboard).
 
-**Git state:** `main` branch, clean working tree
-- Último: `ec17a59` Merge: RLS debug_logs + SEO baseline + branded auth emails
-- Anterior: `47f2fca` feat(seo,lint): add eslint flat config + SEO baseline (robots, sitemap, OG)
-- Anterior: `c02d488` fix(db): enable RLS on debug_logs
+**Git state (verificado 2026-06-20):** `main` branch, **clean working tree**, sincronizado con `origin/main`.
+- HEAD = producción: `7640a76` docs(handoff): final verification — Ola 1 production-ready
+- Anterior: `49634f3` docs: mark Ola 1 as complete (webhook + SSL + SMTP ready)
+- Anterior: `a657018` docs: update HANDOFF + tasks for Ola 1 verification
+- Netlify production deploys recientes (todos `state=ready`): `7640a76` (2026-06-16), `49634f3`, `a657018`, `ec17a59`, `3337e80`.
 
 **PRÓXIMO PASO — ÚLTIMO BLOQUEADOR (5 MIN):**
-1. **SMTP en Supabase dashboard (ÚNICO pendiente)** — Settings → Auth → Email → SMTP Configuration
+1. **SMTP en Supabase dashboard (ÚNICO pendiente, CONFIRMADO sin configurar 2026-06-20)** — Settings → Auth → Email → SMTP Configuration
    - Host: smtp-relay.brevo.com | Port: 587
    - User: creativedesignseo@gmail.com
    - Pass: **[ver en `~/.claude/credentials/brevo.env`]**
@@ -65,7 +71,9 @@ Mergeado en `main` (commit `49634f3`). Código con headers JWT, wallet v2, 404, 
 
 | Recurso | Valor |
 |---------|-------|
-| Supabase project ref | `fvycpwfzolzchlwwqafr` |
+| **Supabase cuenta (login)** | **`creativedesignseo@gmail.com`** · org `creativedesignseo` (`ueoywlabbflzbsmuwweg`) · rol Owner · MFA off — *verificado vía Management API 2026-06-20* |
+| Supabase project ref (LowSplit PROD) | `fvycpwfzolzchlwwqafr` (name `lowsplit`, `ACTIVE_HEALTHY`, us-east-1) — **🔴 BD viva, NO borrar** |
+| Otros proyectos en esa misma cuenta | `exxfnkgojjhjodlahxlp` (`nexopos-dev`, activo) · `sytajhzsxhhudiggdlcf` (`shopify-import`, INACTIVE) — NO son LowSplit |
 | Netlify site | `lowsplit-app` · ID `9c303714-eabd-4ce2-98df-de930ba7bca1` · https://app.netlify.com/projects/lowsplit-app |
 | Cloudflare zona | `lowsplit.com` · ID `6788d2a72bb81784332928acae11e5f2` |
 | Stripe cuenta | `acct_1Eg4WWGtkBSGwZr1` (compartida con Adspubli) |
@@ -98,17 +106,21 @@ acceso nunca se concede.
 
 ---
 
-## Resumen del estado actual
+## Resumen del estado actual (re-verificado 2026-06-20)
 
-LowSplit fue **re-auditado** con 13 agentes (`saas-audit` full) sobre la rama `fix/p0-production-readiness`. Resultado en `AUDIT_REPORT.md`. **Score: producción 8/100 (sin cambios), código en rama ~12/100, proyectado tras activación ~55/100.** Sigue 🛑 BLOQUEADO.
+> ⚠️ Esta sección contenía un veredicto viejo de la auditoría inicial ("producción 8/100, BLOQUEADO, migración sin aplicar, pagos rotos"). **Esos datos YA NO son ciertos** y se han retirado para no inducir a error. Lo que sigue es el estado real verificado hoy contra código y prod.
 
-**Hallazgo clave de la re-auditoría:** la Fase 0 es **correcta a nivel de código** (los 7 P0 originales cerrados en backend), PERO:
-1. **No está activa:** la migración SQL NO se aplicó en Supabase y el PR #1 no se mergeó → la BD viva y el sitio siguen vulnerables.
-2. **REGRESIÓN crítica (PAY-101):** el backend exige JWT pero el frontend **no envía el header `Authorization`** → el pago con tarjeta y la recarga devuelven **401 al 100%**. Los pagos están ROTOS.
-3. **Pago wallet manipulable (PAY-102):** `handle_join_group_wallet` se llama desde el cliente con `p_amount` controlado y sin binding `auth.uid()`.
-4. **Legal (auditado por 1ª vez): 3 críticos** — credenciales en texto plano, sin páginas legales (404), sin derecho al olvido.
+LowSplit está **EN VIVO y operativo en producción** (`https://lowsplit.com`, commit `7640a76`). La Fase 0 + Ola 1 están **mergeadas en `main` y desplegadas**, y las dos migraciones P0 (`20260527_p0_hardening`, `20260529_wallet_hardening`) están **aplicadas** en la BD viva. Los 3 críticos de pago de la auditoría inicial están **resueltos en prod**:
+1. ✅ Migración SQL P0 aplicada (ya no es vulnerable la BD viva).
+2. ✅ PAY-101 (frontend sin header `Authorization` → 401): headers JWT añadidos, en prod.
+3. ✅ PAY-102 (wallet manipulable): sustituido por `handle_join_group_wallet_v2` (bind a `auth.uid()` + recálculo en servidor).
 
-**El camino a producción es ahora un checklist corto** (Fase 0.5 de activación, ver TODO.md), no trabajo profundo.
+**Lo que SIGUE pendiente (real, no resuelto):**
+- 🔴 **SMTP sin configurar** en Supabase → el signup real no funciona (≈2 emails/h). **Único bloqueador para abrir registro.**
+- 🟠 **Ola 2 (Legal + Seguridad):** credenciales de cuentas en texto plano (`subscription_groups`), páginas legales (`/terms`,`/privacy`,`/refund`) ausentes, sin borrado de cuenta/RGPD, admin hardening.
+- 🟡 **Ola 3 (UI/UX):** design system, `<Button>`/`<Modal>`, 17 `alert()`→Toast, sellos de confianza en checkout.
+
+Referencia histórica de la auditoría completa: `AUDIT_REPORT.md` (interpretarlo a la luz de este resumen — varios de sus P0 ya están cerrados).
 
 ## Qué estábamos haciendo antes de cambiar de chat
 
@@ -155,9 +167,9 @@ La decisión inmediata pendiente era: **¿qué camino seguir?** (A: cerrar Fase 
 | C10 | **Webhook Stripe apuntaba a dominio muerto (404)** → pago no otorga acceso | 🔴 Crítico | ✅ RESUELTO hoy — URL→lowsplit.com + 4 eventos |
 | C11 | **Auth URLs Supabase apuntaban al subdominio viejo** → emails con enlace erróneo | 🟠 Alto | ✅ RESUELTO hoy — site_url + allow list a lowsplit.com |
 | H1 | Funciones admin fuera del hardening (CORS `*`, `setRole` accesible a admin normal) | 🟠 Alto | Pendiente Ola 2 |
-| H2 | `npm run lint` roto (falta `eslint.config.js`) | 🟠 Alto | Pendiente |
-| H3 | SEO: sin sitemap/robots/OG (noindex ✅ ya eliminado) | 🟠 Alto | Pendiente Fase 1 |
-| H4 | **SMTP no configurado** → emails de registro/reset no llegan (Arreglo 2) | 🟠 Alto | Pendiente — Supabase Auth → SMTP |
+| H2 | `npm run lint` roto (falta `eslint.config.js`) | 🟠 Alto | ✅ RESUELTO — `eslint.config.js` existe; lint pasa (0 err, 38 warn). Verificado 2026-06-20 |
+| H3 | SEO: sin sitemap/robots/OG (noindex ✅ ya eliminado) | 🟠 Alto | ✅ EN VIVO — `robots.txt` 200, `sitemap.xml` 200. Pendiente solo OG image dedicada 1200×630 |
+| H4 | **SMTP no configurado** → emails de registro/reset no llegan (Arreglo 2) | 🟠 Alto | 🔴 Pendiente (re-confirmado 2026-06-20: `smtp_host=null`) — Supabase Auth → SMTP |
 | M1 | `success_url` desajustado (`payment=success` vs `success=true`) | 🟡 Medio | ✅ RESUELTO — en prod |
 | M2 | Reputación falsa hardcodeada "99.04%" + "verificado" universal (dark pattern DSA) | 🟡 Medio | Nuevo |
 | M3 | Sistema de diseño roto: `primary-500` azul, rojo hardcoded 124×, sin `<Button>`, 17 `alert()` | 🟡 Medio | Pendiente Fase 2 |
@@ -192,7 +204,7 @@ La decisión inmediata pendiente era: **¿qué camino seguir?** (A: cerrar Fase 
 - ❓ ¿Merge a `main` vía PR o directo?
 - ❓ ¿Atacar SEO ahora (Fase 1) o UI/UX primero?
 - ❓ ¿Modo Stripe: test o live para el lanzamiento? (definir qué keys van en Netlify)
-- ❓ ¿Canonical: apex `lowsplit.com` o `www`? (recomendado apex, falta redirect www→apex)
+- ✅ Canonical: apex `lowsplit.com`. El redirect `www`→apex (301) **ya funciona en prod** (verificado 2026-06-20).
 - ❓ ¿Reimplementar Bizum con PSP real o dejarlo desactivado?
 - ❓ Confirmar que las env vars secretas están en Netlify (pendiente de verificar).
 

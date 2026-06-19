@@ -4,17 +4,19 @@
 > Older completed tasks live in `progress/`. Full backlog in `TODO.md`.
 > Operational truth in `HANDOFF.md`.
 
-**Last updated:** 2026-06-15 (Ola 1 verificada: webhook ✅ funcional, SMTP pendiente)
+**Last updated:** 2026-06-20 (re-verificación código + prod: todo EN VIVO, SMTP re-confirmado como único bloqueador)
 
 ---
 
 ## Current state
 
 Project is **LIVE** at https://lowsplit.com (Netlify behind Cloudflare).
-Fase 0 + Ola 1 **están en producción** (PR #1 mergeado, deploy hecho). Las dos
-migraciones SQL P0 **están aplicadas** en Supabase. Hoy se corrigieron dos
-config de producción que estaban rotas: el **webhook de Stripe** (apuntaba a un
-dominio muerto) y las **URLs de Auth de Supabase** (apuntaban al subdominio viejo).
+Fase 0 + Ola 1 **están en producción** (mergeado en `main`, deploy `7640a76`
+`state=ready`). Las dos migraciones SQL P0 **están aplicadas** en Supabase.
+Re-verificado 2026-06-20 contra código y prod: build verde, apex 200 + TLS OK,
+`www`→apex 301, webhook vivo (400 sin firma), robots/sitemap 200, Supabase
+advisors 0 errores. **Único bloqueador real: SMTP sin configurar** (`smtp_host=null`,
+≈2 emails/h) → el signup no funciona hasta activarlo.
 
 Stack: Node.js · Hosting: Netlify · Live in production: true
 
@@ -22,6 +24,7 @@ Stack: Node.js · Hosting: Netlify · Live in production: true
 
 ## ✅ Hecho recientemente (esta tanda)
 
+- [x] **Re-verificación realidad código + prod** (2026-06-20) — build verde (`verify.sh` all checks passed, lint 0 err), prod 200 + TLS válido, `www`→apex 301, webhook vivo (400 sin firma), robots/sitemap 200, Supabase advisors 0 ERROR, deploy `7640a76` `state=ready`. SMTP re-confirmado SIN configurar (`smtp_host=null`). Cuenta Supabase verificada: `creativedesignseo@gmail.com`. HANDOFF actualizado con esta realidad.
 - [x] **Webhook LIVE verificado funcional** (2026-06-15 16:23) — 176 eventos procesados en debug_logs, último a las 16:23:13. Firma Stripe validada ✅. Endpoint `we_1Suq56GtkBSGwZr1NWNeJFlZ` → `https://lowsplit.com/.netlify/functions/stripe-webhook` activo y recibiendo eventos. `STRIPE_WEBHOOK_SECRET` en Netlify COINCIDE con el signing secret.
 - [x] **Build green** (2026-06-15) — `npm run build` ✅, `npm run lint` ✅ (38 warnings, 0 errores), `verify.sh` ✅ all checks passed.
 - [x] **Production live** — lowsplit.com responde HTTP 200, Netlify deploy funcional.
